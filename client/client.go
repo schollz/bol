@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -18,8 +19,19 @@ import (
 
 func main() {
 	archiver.Zip.Make("output.zip", []string{"../testing/test"})
-	sync(true)
 	sync(false)
+	sync(true)
+	openZip()
+}
+
+func openZip() {
+	defer timeTrack(time.Now(), "open zip")
+	archiver.Zip.Open("output.zip", "./")
+
+	files, _ := ioutil.ReadDir("./test")
+	for _, f := range files {
+		fmt.Println(f.Name())
+	}
 }
 
 // PublicKeyFiles is used to accessing the remote filesystem

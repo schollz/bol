@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -38,13 +38,15 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandlePost(w http.ResponseWriter, r *http.Request) {
-	outFile, err := os.Create("test.txt")
+	username, _, _ := r.BasicAuth()
+	outFile, err := os.Create(username + ".zip")
 	if err != nil {
 		panic(err)
 	}
 	// handle err
 	defer outFile.Close()
 	_, err = io.Copy(outFile, r.Body)
+	fmt.Println("Wrote file")
 	io.WriteString(w, "thanks\n")
 }
 
@@ -54,9 +56,10 @@ type Result struct {
 }
 
 func HandleJSON(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	result, _ := json.Marshal(Result{"tee", "dub"})
-	io.WriteString(w, string(result))
+	username, _, _ := r.BasicAuth()
+	w.Header().Set("Content-Type", "octet-stream")
+	file, _ := os.Open(username + ".zip")
+	io.Copy(w, file)
 }
 
 func GetOnly(h handler) handler {

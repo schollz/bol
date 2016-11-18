@@ -16,6 +16,10 @@ The timestamp is used to provide the ordering.
 The document is used to filter out only the needed entries.
 The text content is either the fulltext of that entry, or an indicator ("ignore document" / "ignore entry") to help with reconstruction.
 
+# Compression / Encryption
+
+The archive is a AES encrypted tar.bz2 archive. Upon use, this archive is decrypted, then decompressed, and then stored in a temp directory. When finished, the temp directory is archived and then encrypted and then shredded.
+
 # Syncing
 
 There are two possible methods.

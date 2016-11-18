@@ -1,9 +1,9 @@
-# edfs
-encrypted distributed file system
+# ssed
+simple synchronization and encryption of documents
 
 # Guide
 
-This filesystem (fs) stores documents. A document is composed of entries. A single entry has:
+`ssed` stores documents. A document is composed of entries. A single entry has:
 
 - text content, main data of entry
 - timestamp, date of that entry
@@ -12,7 +12,17 @@ This filesystem (fs) stores documents. A document is composed of entries. A sing
 
 The fs stores an entry by writing a JSON encoding the entry components to `UUID.aes` (AES encrypted) where `UUID` is random.
 
+The timestamp is used to provide the ordering.
+The document is used to filter out only the needed entries.
+The text content is either the fulltext of that entry, or an indicator ("ignore document" / "ignore entry") to help with reconstruction.
+
 # Syncing
+
+There are two possible methods.
+
+Each method proceeds by first downloading an archive of all the entries and unzipping it into a working directory. If the download was successful, then, after writing, it is uploaded back to the remote. *It only uploads if download was successful*, because otherwise the archive can contain things out of sync.
+
+## Method 1 - Server (~500 ms upload/download)
 
 Syncing is provided using a server and client. The server has two routes which the client can use:
 
@@ -21,6 +31,20 @@ Syncing is provided using a server and client. The server has two routes which t
 
 These two routes are protected by basic authentication. The basic authentication is determined on startup of server.
 
-The syncing occurs by first getting the latest archive - the archive is downloaded via `GET`, then the archive is unzipped, and then the new files are copied over to the current working directory.
+The user needs to provide:
 
-Syncing is finished by pushing the latest version - the local files are archived, and then pushed to the server via `POST`. The server then unzips the new archive and the old archive, and copies new files over to the old archive, and then creates a new archive based on those files which is available for future `GET`.
+- server address
+- username and password
+
+## Method 2 - SSH remote computer (~1500 ms upload/download)
+
+SSH is provided by the sftp library which can upload and download.
+
+The user needs to provide:
+
+- server address
+- private SSH key OR password to access server
+
+# Purposeful neglectfulness
+
+I purposely do not want to store diffs, since I'd like to optionally add an entry at any point in time without rebuilding (rebasing) history.

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"io"
 	"io/ioutil"
 	"log"
@@ -12,12 +13,23 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	"github.com/gtank/cryptopasta"
 	"github.com/mholt/archiver"
 	"github.com/pkg/sftp"
 )
 
 func main() {
-	archiver.Zip.Make("output.zip", []string{"../testing/test"})
+	archiver.TarBz2.Make("output.tar.bz2", []string{"../testing/test"})
+	password := []byte("testpassword")
+	b, _ := ioutil.ReadFile("output.tar.bz2")
+	key := sha256.Sum256(password)
+	encrypted, _ := cryptopasta.Encrypt(b, &key)
+	ioutil.WriteFile("output.tar.bz2.aes", encrypted, 0644)
+
+	content, _ := ioutil.ReadFile("output.tar.bz2.aes")
+	decrypted, _ := cryptopasta.Decrypt(content, &key)
+	ioutil.WriteFile("output2.tar.bz2", decrypted, 0644)
+
 	sync(false)
 	sync(true)
 	openZip()

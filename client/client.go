@@ -1,19 +1,84 @@
 package main
 
 import (
+	"bytes"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"time"
 
+	"golang.org/x/crypto/ssh"
+
 	"github.com/mholt/archiver"
+	"github.com/pkg/sftp"
 )
 
 func main() {
-	archiver.Zip.Make("output.zip", []string{"test"})
-	upload()
-	download()
+	archiver.Zip.Make("output.zip", []string{"../testing/test"})
+	sync(true)
+	sync(false)
+}
+
+// PublicKeyFiles is used to accessing the remote filesystem
+func PublicKeyFile(file string) ssh.AuthMethod {
+	buffer, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil
+	}
+
+	key, err := ssh.ParsePrivateKey(buffer)
+	if err != nil {
+		return nil
+	}
+	return ssh.PublicKeys(key)
+}
+
+// syncUp pushes the latest versions of all the documents to the remote
+func sync(up bool) {
+	defer timeTrack(time.Now(), "pushing")
+	// open an SFTP session over an existing ssh connection.
+	sshConfig := &ssh.ClientConfig{
+		User: "zns",
+		Auth: []ssh.AuthMethod{
+			PublicKeyFile("/home/zns/.ssh/id_rsa"),
+		},
+	}
+	connection, err := ssh.Dial("tcp", "cowyo.com:22", sshConfig)
+	defer connection.Close()
+
+	sftp, err := sftp.NewClient(connection)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer sftp.Close()
+	if up {
+		f, err := sftp.Create(path.Join("/home/zns/test.zip"))
+		fileContents, _ := ioutil.ReadFile("output.zip")
+		if _, err = f.Write(fileContents); err != nil {
+			log.Fatal(err)
+		}
+		f.Close()
+	} else {
+		fp, err := sftp.Open("/home/zns/test.zip")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		buf := bytes.NewBuffer(nil)
+		_, err = io.Copy(buf, fp)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fp.Close()
+
+		err = ioutil.WriteFile("test.zip", buf.Bytes(), 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 }
 
 func upload() {

@@ -22,9 +22,14 @@ The archive is a AES encrypted tar.bz2 archive. Upon use, this archive is decryp
 
 # Syncing
 
-There are two possible methods.
+The remote *always* as the latest. The local maybe ahead or behind. This means the local must always combine the archives by unzipping them into the same directory and then rezipping them. If the local is ahead or behind, it will simply combine its file in.
 
-Each method proceeds by first downloading an archive of all the entries and unzipping it into a working directory. If the download was successful, then, after writing, it is uploaded back to the remote. *It only uploads if download was successful*, because otherwise the archive can contain things out of sync.
+## Methods
+There are two possible methods for syncing.
+
+Each method proceeds by first downloading an archive of all the entries and unzipping it into a working directory. Then it unzips the current archvie intot he working directory, and then re-archives all those files as the current archive. *This way the local copies can never be overwritten*
+
+If the download was successful, then, after writing, it is uploaded back to the remote. *It only uploads if download was successful*, because otherwise the archive can contain things out of sync.
 
 ## Method 1 - Server (~500 ms upload/download)
 
@@ -51,4 +56,23 @@ The user needs to provide:
 
 # Purposeful neglectfulness
 
-I purposely do not want to store diffs, since I'd like to optionally add an entry at any point in time without rebuilding (rebasing) history.
+- I purposely do not want to store diffs, since I'd like to optionally add an entry at any point in time without rebuilding (rebasing) history.
+
+# API 
+
+These are the commands available to the user:
+
+- Open(method): where method is "ssh://server" or "http://server". This tells the server to attempt to pull. and create files if nessecary. The NAMEOFREPO is the base58 encoding of the method.
+- Close(): closes the repo, telling it to push. Though it only pushes if it was successful pulling
+- Update(text,documentName,entryName,date): make a new entry (or edit old one if entryName is not empty). date can be empty, it will fill in the current date if so
+- DeleteDocument(documentName): will simply Update("ignore-document",documentName,"","")
+- DeleteEntry(documentName,entryName): will simply Update("ignore-entry",documentName,entryName,"")
+- GetEntry(documentName,entryName): returns all versions of entry, ordered by date
+- GetDocument(documentName): returns latest versions of all entries in document, ordered by date 
+
+## Implementation notes
+
+Method 1 and 2 stores files on server as `$HOME/.cache/ssed/server/NAMEOFREPO.tar.bz2`. 
+Local stores files as `$HOME/.cache/ssed/local/NAMEOFREPO/NAMEOFREPO.tar.bz2` and the temp files (for unziping are stored in) `$HOME/.cache/ssed/local/NAMEOFREPO/temp`. Basically the working directory is simply `$HOME/.cache/ssed/local/NAMEOFREPO/`.
+
+Passwords for the archive are never stored. Authentication for accessing the server (name/password for Method 1 or password for Method 2) are stored in an encrypted document `$HOME/.cache/ssed/local/NAMEOFREPO/config.json`.

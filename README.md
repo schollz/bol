@@ -2,9 +2,11 @@
 
 *jot2* is a command-line program that lets you write/view encrypted documents and a webpage that lets you write (not view) documents.
 
+*jot2* uses `ssed` as a backend for the encrypted storage and synchronization.
+
 # Guide to `ssed`
 
-`ssed` stores documents. A document is composed of entries. A single entry has:
+`ssed` is simple synchronization of encrypted documents. `ssed` stores documents. A document is composed of entries. A single entry has:
 
 - text content, main data of entry
 - timestamp, date of that entry

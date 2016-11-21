@@ -1,7 +1,8 @@
-# ssed
-simple synchronization and encryption of documents
+# jot2
 
-# Guide
+*jot2* is a command-line program that lets you write/view encrypted documents and a webpage that lets you write (not view) documents.
+
+# Guide to `ssed`
 
 `ssed` stores documents. A document is composed of entries. A single entry has:
 

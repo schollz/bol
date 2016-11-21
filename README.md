@@ -35,8 +35,8 @@ If the download was successful, then, after writing, it is uploaded back to the 
 
 Syncing is provided using a server and client. The server has two routes which the client can use:
 
-- `GET /` - getting the latest archive
-- `POST /` - pushing changes
+- `GET /get` - getting the latest archive
+- `POST /post` - pushing changes
 
 These two routes are protected by basic authentication. The basic authentication is determined on startup of server.
 
@@ -53,6 +53,12 @@ The user needs to provide:
 
 - server address
 - private SSH key OR password to access server
+
+# Adding/viewing entries
+
+Adding/viewing entries can be done using the command line program.
+
+Adding entries should also done using the server, using [trix](https://trix-editor.org/) and then a form for document name, user name, and password
 
 # Purposeful neglectfulness
 

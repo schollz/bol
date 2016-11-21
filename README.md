@@ -61,7 +61,7 @@ The user needs to provide:
 
 Adding/viewing entries can be done using the command line program.
 
-Adding entries should also done using the server, using [trix](https://trix-editor.org/) and then a form for document name, user name, and password
+Adding entries should also done using the server, using [trix](https://trix-editor.org/) or [quill](http://codepen.io/anon/pen/JbWvyY?editors=1111) and then a form for document name, user name, and password
 
 # Purposeful neglectfulness
 

@@ -65,7 +65,8 @@ Adding entries should also done using the server, using [trix](https://trix-edit
 
 # Purposeful neglectfulness
 
-- I purposely do not want to store diffs, since I'd like to optionally add an entry at any point in time without rebuilding (rebasing) history.
+- Diffs will not be stored. I'd like to optionally add an entry at any point in time without rebuilding (rebasing) history.
+- Files can not be deleted. It makes synchronization easier and also the disk cost of words is VERY small so its fine to store tons of text files (~1000's)
 
 # API 
 

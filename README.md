@@ -72,13 +72,15 @@ Adding entries should also done using the server, using [trix](https://trix-edit
 
 These are the commands available to the user:
 
-- Open(method): where method is "ssh://server" or "http://server". This tells the server to attempt to pull. and create files if nessecary. The NAMEOFREPO is the base58 encoding of the method.
-- Close(): closes the repo, telling it to push. Though it only pushes if it was successful pulling
-- Update(text,documentName,entryName,date): make a new entry (or edit old one if entryName is not empty). date can be empty, it will fill in the current date if so
-- DeleteDocument(documentName): will simply Update("ignore-document",documentName,"","")
-- DeleteEntry(documentName,entryName): will simply Update("ignore-entry",documentName,entryName,"")
-- GetEntry(documentName,entryName): returns all versions of entry, ordered by date
-- GetDocument(documentName): returns latest versions of all entries in document, ordered by date 
+- `Open(name,password,method)`: where method is "ssh://server" or "http://server". This tells the server to attempt to pull. and create files if nessecary. The name is the name to store the repo under. The password is used with the name for authentication if http, or if not, it is location to the private key (if blank it assumes private key as ~/.ssh/id_rsa).
+- `Close()`: closes the repo, telling it to push. Though it only pushes if it was successful pulling
+- `Update(text,documentName,entryName,date)`: make a new entry (or edit old one if entryName is not empty). date can be empty, it will fill in the current date if so
+- `DeleteDocument(documentName)`: will simply Update("ignore-document",documentName,"","")
+- `DeleteEntry(documentName,entryName)`: will simply Update("ignore-entry",documentName,entryName,"")
+- `GetEntry(documentName,entryName)`: returns all versions of entry, ordered by date
+- `GetDocument(documentName)`: returns latest versions of all entries in document, ordered by date 
+
+Every action other than `Open()` and `Close()` will untar and decompress the archive, get the contents, and then retar it and compress (so it mostly stays in that state. Unless this is slow, then it will be open to Open and Close to do this.
 
 ## Implementation notes
 

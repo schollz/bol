@@ -19,7 +19,7 @@ The archive is a AES encrypted tar.bz2 archive. Upon use, this archive is decryp
 
 # Syncing
 
-The remote *always* as the latest. The local maybe ahead or behind. This means the local must always combine the archives by unzipping them into the same directory and then rezipping them. If the local is ahead or behind, it will simply combine its file in.
+The remote *always* has the latest. The local maybe ahead or behind. This means the local must always combine the archives by unzipping them into the same directory and then rezipping them. If the local is ahead or behind, it will simply combine its file in.
 
 ## Methods
 There are two possible methods for syncing.

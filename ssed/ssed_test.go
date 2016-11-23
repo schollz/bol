@@ -1,13 +1,9 @@
 package ssed
 
 import (
-	"archive/tar"
-	"compress/gzip"
 	"fmt"
-	"io"
 	"os"
 	"path"
-	"strconv"
 	"testing"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -80,27 +76,49 @@ func TestConfig(t *testing.T) {
 }
 
 func TestEntries(t *testing.T) {
+	EraseAll()
 	// Test adding a entry
 	DebugMode()
-	fs, _ := Open("zack", "test", "")
+	fs, _ := Open("zack", "test", "ssh://somemethod")
 	fs.Update("some text", "notes", "", "2014-11-20T13:00:00-05:00")
 	fs.Update("some other test", "journal", "", "2014-11-20T13:00:00-05:00")
+	fs.Update("some other test", "journal", "getEntry", "2010-11-20T13:00:00-05:00")
 	fs.Update("some text2", "notes", "", "2015-11-23T13:00:00-05:00")
 	fs.Update("some text3", "notes", "entry1", "2016-11-20T13:00:00-05:00")
+	fs.Update("some text4", "notes", "entry2", "2013-11-20T13:00:00-05:00")
 	fs.Update("some text3, edited", "notes", "entry1", "2016-11-23T13:00:00-05:00")
-	for i := 0; i < 1000; i++ {
-		text := strconv.Itoa(i)
-		fs.Update(text, "test", text, "")
-	}
-	fs.Close()
+	// for i := 0; i < 1000; i++ {
+	// 	text := strconv.Itoa(i)
+	// 	fs.Update("asdf laksdfj alskdj flaks jdflkas jdfl", "test", text, "")
+	// }
 
 	// check if ordering is correct
-	fs, _ = Open("zack", "test", "")
 	for _, entry := range fs.GetDocument("notes") {
 		fmt.Println(entry.Document, entry.Timestamp, entry.Text)
 	}
 	fs.Close()
 
+	// check if ordering is correct
+	fs, _ = Open("zack", "test", "")
+	fs.DeleteEntry("notes", "entry2")
+	for _, entry := range fs.GetDocument("notes") {
+		fmt.Println(entry.Document, entry.Timestamp, entry.Text)
+	}
+	fs.Close()
+
+	fs, _ = Open("zack", "test", "")
+	fmt.Println(fs.ListDocuments())
+	fs.DeleteDocument("notes")
+	fmt.Println(fs.ListDocuments())
+	for _, entry := range fs.GetDocument("notes") {
+		fmt.Println(entry.Document, entry.Timestamp, entry.Text)
+	}
+	fs.Close()
+
+	fs, _ = Open("zack", "test", "")
+	entry, _ := fs.GetEntry("journal", "getEntry")
+	fmt.Println(entry.Document, entry.Timestamp, entry.Text)
+	fs.Close()
 	// fs2, _ := Open("zack2", "test2", "http://something")
 	// fs2.Update("blah", "texts", "", "2014-11-21T13:00:00-05:00")
 	// fs2.Update("ghjgjgj", "texts", "", "2014-11-20T13:00:00-05:00")
@@ -110,59 +128,4 @@ func TestEntries(t *testing.T) {
 	// }
 	// fs2.Close()
 
-}
-
-func processFile(srcFile string, num int) {
-	f, err := os.Open(srcFile)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	defer f.Close()
-
-	gzf, err := gzip.NewReader(f)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	tarReader := tar.NewReader(gzf)
-
-	i := 0
-	for {
-		header, err := tarReader.Next()
-
-		if err == io.EOF {
-			break
-		}
-
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		name := header.Name
-
-		switch header.Typeflag {
-		case tar.TypeDir:
-			continue
-		case tar.TypeReg:
-			fmt.Println("(", i, ")", "Name: ", name)
-			if i == num {
-				fmt.Println(" --- ")
-				io.Copy(os.Stdout, tarReader)
-				fmt.Println(" --- ")
-				os.Exit(0)
-			}
-		default:
-			fmt.Printf("%s : %c %s %s\n",
-				"Yikes! Unable to figure out type",
-				header.Typeflag,
-				"in file",
-				name,
-			)
-		}
-
-		i++
-	}
 }

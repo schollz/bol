@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -71,9 +72,14 @@ func EraseConfig() {
 }
 
 func EraseAll() {
+	createDirs()
 	EraseConfig()
 	os.RemoveAll(pathToCacheFolder)
 	os.RemoveAll(pathToConfigFile)
+	files, _ := filepath.Glob(path.Join(pathToCacheFolder, "*"))
+	for _, file := range files {
+		fmt.Println(file)
+	}
 }
 
 func ListConfigs() []config {
@@ -99,6 +105,7 @@ type document struct {
 }
 
 type ssed struct {
+	parsed           bool
 	shredding        bool
 	pathToSourceRepo string
 	username         string
@@ -223,7 +230,7 @@ func Open(username, password, method string) (*ssed, error) {
 
 // Update make a new entry
 // date can be empty, it will fill in the current date if so
-func (ssed ssed) Update(text, documentName, entryName, timestamp string) error {
+func (ssed *ssed) Update(text, documentName, entryName, timestamp string) error {
 	if !utils.Exists(path.Join(pathToTempFolder, "data")) {
 		os.Mkdir(path.Join(pathToTempFolder, "data"), 0755)
 	}
@@ -250,7 +257,20 @@ func (ssed ssed) Update(text, documentName, entryName, timestamp string) error {
 	encrypted, _ := cryptopasta.Encrypt(b, &key)
 
 	err = ioutil.WriteFile(fileName, []byte(hex.EncodeToString(encrypted)), 0644)
+	ssed.parsed = false
 	return err
+}
+
+// Delete Entry will simply Update("ignore-entry",documentName,entryName,"")
+func (ssed *ssed) DeleteEntry(documentName, entryName string) {
+	ssed.Update("ignore entry", documentName, entryName, "")
+	ssed.parsed = false
+}
+
+// Delete Entry will simply Update("ignore document",documentName,entryName,"")
+func (ssed *ssed) DeleteDocument(documentName string) {
+	ssed.Update("ignore document", documentName, "", "")
+	ssed.parsed = false
 }
 
 // Close closes the repo and pushes if it was succesful pulling
@@ -351,16 +371,67 @@ func (ssed *ssed) parseArchive() {
 			ssed.ordering[key][i], ssed.ordering[key][j] = ssed.ordering[key][j], ssed.ordering[key][i]
 		}
 	}
+
+	ssed.parsed = true
+}
+
+func (ssed *ssed) ListDocuments() []string {
+	defer timeTrack(time.Now(), "Listing documents")
+	if !ssed.parsed {
+		ssed.parseArchive()
+	}
+	documents := []string{}
+	for document := range ssed.ordering {
+		ignoring := false
+		for _, uuid := range ssed.ordering[document] {
+			if ssed.entries[uuid].Text == "ignore document" {
+				ignoring = true
+				break
+			}
+		}
+		if !ignoring {
+			documents = append(documents, document)
+		}
+	}
+	return documents
 }
 
 func (ssed *ssed) GetDocument(documentName string) []entry {
 	defer timeTrack(time.Now(), "Getting document "+documentName)
-	ssed.parseArchive()
-	entries := make([]entry, len(ssed.ordering[documentName]))
-	for i, uuid := range ssed.ordering[documentName] {
-		entries[i] = ssed.entries[uuid]
+	if !ssed.parsed {
+		ssed.parseArchive()
 	}
-	return entries
+	entries := make([]entry, len(ssed.ordering[documentName]))
+	curEntry := 0
+	for _, uuid := range ssed.ordering[documentName] {
+		if ssed.entries[uuid].Text == "ignore document" {
+			return []entry{}
+		}
+		if ssed.entries[uuid].Text == "ignore entry" {
+			continue
+		}
+		entries[curEntry] = ssed.entries[uuid]
+		curEntry++
+	}
+	return entries[0:curEntry]
+}
+
+func (ssed *ssed) GetEntry(documentName, entryName string) (entry, error) {
+	defer timeTrack(time.Now(), "Getting entry "+entryName)
+	if !ssed.parsed {
+		ssed.parseArchive()
+	}
+	var entry entry
+	for _, uuid := range ssed.ordering[documentName] {
+		if ssed.entries[uuid].Entry == entryName {
+			if ssed.entries[uuid].Text == "ignore entry" {
+				return entry, errors.New("Entry deleted")
+			} else {
+				return ssed.entries[uuid], nil
+			}
+		}
+	}
+	return entry, errors.New("Entry not found")
 }
 
 // timeTrack from https://coderwall.com/p/cp5fya/measuring-execution-time-in-go

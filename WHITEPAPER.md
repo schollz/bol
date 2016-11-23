@@ -73,7 +73,7 @@ Every action other than `Open()` and `Close()` will untar and decompress the arc
 
 # Configuration
 
-The first time the program is run [it generates a JSON](https://play.golang.org/p/6jHI-MRx0z) containing the configuration file in `$HOME/.config/ssed/config.json:
+Whenever `Open(..)` is called, [it generates a JSON](https://play.golang.org/p/6jHI-MRx0z) containing the configuration file in `$HOME/.config/ssed/config.json:
 
 ```javascript
 [  

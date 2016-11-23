@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"math/rand"
 	"os"
 	"strings"
@@ -18,9 +19,11 @@ func HashAndHex(s string) string {
 // GetRandomMD5Hash returns 8 bytes of a random md5 hash
 func GetRandomMD5Hash() string {
 	hasher := md5.New()
-	hasher.Write([]byte(RandStringBytesMaskImprSrc(10, time.Now().UnixNano())))
+	hasher.Write([]byte(RandStringBytesMaskImprSrc(10)))
 	return hex.EncodeToString(hasher.Sum(nil))[0:8]
 }
+
+var src = rand.NewSource(time.Now().UnixNano())
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 const (
@@ -29,10 +32,8 @@ const (
 	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
 )
 
-// RandStringBytesMaskImprSrc generates a random string using a alphabet and seed
-// from SO
-func RandStringBytesMaskImprSrc(n int, seed int64) string {
-	src := rand.NewSource(seed)
+// stole this from stack overflow.
+func RandStringBytesMaskImprSrc(n int) string {
 	b := make([]byte, n)
 	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
 	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
@@ -87,6 +88,10 @@ func Shred(fileName string) error {
 	fileData, err := f.Stat()
 	if err != nil {
 		return err
+	}
+	if fileData.IsDir() {
+		// it's a directory
+		return errors.New("Can't shred directory")
 	}
 	b := make([]byte, fileData.Size())
 	_, err = rand.Read(b)

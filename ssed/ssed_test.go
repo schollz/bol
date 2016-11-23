@@ -1,9 +1,11 @@
 package ssed
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"testing"
+	"time"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/schollz/bol/utils"
@@ -72,4 +74,21 @@ func TestConfig(t *testing.T) {
 		t.Errorf("Error setting configs: %+v", configs) // last name should be listed first
 	}
 
+}
+
+func TestEntries(t *testing.T) {
+	// Test adding a entry
+	fs, _ := Open("zack", "test", "")
+	defer fs.Close()
+	fs.Update("some text", "notes", "", "")
+	time.Sleep(1000 * time.Millisecond)
+	fs.Update("some text2", "notes", "", "")
+	time.Sleep(1000 * time.Millisecond)
+	fs.Update("some text3", "notes", "", "")
+	fs.parseArchive()
+
+	// check if ordering is correct
+	for _, uuid := range fs.ordering["notes"] {
+		fmt.Println(fs.entries[uuid].Text, fs.entries[uuid].Timestamp)
+	}
 }

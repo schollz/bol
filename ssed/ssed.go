@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jcelliott/lumber"
 	"github.com/mholt/archiver"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/schollz/bol/utils"
@@ -30,9 +31,15 @@ var pathToConfigFile string
 var pathToCacheFolder string
 var pathToTempFolder string
 var homePath string
+var logger *lumber.ConsoleLogger
+
+func DebugMode() {
+	logger.Level(0)
+}
 
 func init() {
-	createDirs()
+	logger = lumber.NewConsoleLogger(lumber.DEBUG)
+	logger.Level(2)
 }
 
 func createDirs() {
@@ -62,6 +69,12 @@ func EraseConfig() {
 	utils.Shred(pathToConfigFile)
 }
 
+func EraseAll() {
+	EraseConfig()
+	os.RemoveAll(pathToCacheFolder)
+	os.RemoveAll(pathToConfigFile)
+}
+
 func ListConfigs() []config {
 	b, _ := ioutil.ReadFile(pathToConfigFile)
 	var configs []config
@@ -85,6 +98,7 @@ type document struct {
 }
 
 type ssed struct {
+	shredding        bool
 	pathToSourceRepo string
 	username         string
 	password         string
@@ -124,6 +138,8 @@ func (ssed *ssed) SetMethod(method string) error {
 // The method cannot be blank for a new user
 // The method cannot be overridden with open, it must be overridden with SetMethod
 func Open(username, password, method string) (*ssed, error) {
+	defer timeTrack(time.Now(), "Opening archive")
+	createDirs()
 	var configs []config
 	hashedPassword, _ := cryptopasta.HashPassword([]byte(password))
 	if !utils.Exists(pathToConfigFile) {
@@ -158,11 +174,7 @@ func Open(username, password, method string) (*ssed, error) {
 				if cryptopasta.CheckPasswordHash([]byte(configs[i].HashedPassword), []byte(password)) != nil {
 					return &ssed{}, errors.New("Incorrect password")
 				} else {
-					return &ssed{
-						username: username,
-						password: password,
-						method:   configs[i].Method,
-					}, nil
+					method = configs[i].Method
 				}
 				foundConfig = i
 				break
@@ -190,23 +202,17 @@ func Open(username, password, method string) (*ssed, error) {
 	ioutil.WriteFile(pathToConfigFile, b, 0644)
 
 	// open repo
-	pathToSourceRepo := path.Join(pathToCacheFolder, configs[0].Username+".tar.bz2.aes")
-	if utils.Exists(pathToSourceRepo) {
-		key := sha256.Sum256([]byte(password))
-		content, _ := ioutil.ReadFile(pathToSourceRepo)
-		decrypted, err := cryptopasta.Decrypt(content, &key)
-		if err != nil {
-			return &ssed{}, err
-		}
-		ioutil.WriteFile(path.Join(pathToTempFolder, "data.tar.bz2"), decrypted, 0644)
+	sourceRepo := path.Join(pathToCacheFolder, configs[0].Username+".tar.bz2")
+	if utils.Exists(sourceRepo) {
 		wd, _ := os.Getwd()
 		os.Chdir(pathToTempFolder)
-		archiver.TarBz2.Open("data.tar.bz2", ".")
+		defer timeTrack(time.Now(), "Unzipping")
+		archiver.TarGz.Open("data.tar.bz2", ".")
 		os.Chdir(wd)
 	}
 
 	return &ssed{
-		pathToSourceRepo: pathToSourceRepo,
+		pathToSourceRepo: sourceRepo,
 		username:         configs[0].Username,
 		password:         password,
 		method:           configs[0].Method,
@@ -226,38 +232,55 @@ func (ssed ssed) Update(text, documentName, entryName, timestamp string) error {
 	if len(timestamp) == 0 {
 		timestamp = time.Now().Format(time.RFC3339)
 	}
+
+	// key := sha256.Sum256([]byte(ssed.password))
+	// encrypted, _ := cryptopasta.Encrypt([]byte(text), &key)
+	// text = hex.EncodeToString(encrypted)
+
 	entry := entry{
 		Text:      text,
 		Document:  documentName,
 		Entry:     entryName,
 		Timestamp: timestamp,
 	}
-	b, _ := json.MarshalIndent(entry, "", "  ")
-	ioutil.WriteFile(fileName, b, 0644)
-	return nil
+	b, err := json.MarshalIndent(entry, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	key := sha256.Sum256([]byte(ssed.password))
+	encrypted, _ := cryptopasta.Encrypt(b, &key)
+
+	err = ioutil.WriteFile(fileName, encrypted, 0644)
+	return err
 }
 
 // Close closes the repo and pushes if it was succesful pulling
 func (ssed ssed) Close() {
+	defer timeTrack(time.Now(), "Closing archive")
 	if utils.Exists(path.Join(pathToTempFolder, "data")) {
 		wd, _ := os.Getwd()
 		os.Chdir(pathToTempFolder)
-		archiver.TarBz2.Make("data.tar.bz2", []string{"data"})
+		archiver.TarGz.Make(ssed.pathToSourceRepo, []string{"data"})
 		os.Chdir(wd)
-		key := sha256.Sum256([]byte(ssed.password))
-		b, _ := ioutil.ReadFile(path.Join(pathToTempFolder, "data.tar.bz2"))
-		encrypted, _ := cryptopasta.Encrypt(b, &key)
-		ioutil.WriteFile(path.Join(pathToCacheFolder, ssed.username+".tar.bz2.aes"), encrypted, 0644)
 	}
 	// shred the data files
-	files, _ := filepath.Glob(path.Join(pathToTempFolder, "*", "*"))
-	for _, file := range files {
-		utils.Shred(file)
-	}
-	// shred the archive
-	files, _ = filepath.Glob(path.Join(pathToTempFolder, "*"))
-	for _, file := range files {
-		utils.Shred(file)
+	if ssed.shredding {
+		files, _ := filepath.Glob(path.Join(pathToTempFolder, "*", "*"))
+		for _, file := range files {
+			err := utils.Shred(file)
+			if err == nil {
+				// logger.Debug("Shredded %s", file)
+			}
+		}
+		// shred the archive
+		files, _ = filepath.Glob(path.Join(pathToTempFolder, "*"))
+		for _, file := range files {
+			err := utils.Shred(file)
+			if err == nil {
+				// logger.Debug("Shredded %s", file)
+			}
+		}
 	}
 	os.RemoveAll(pathToTempFolder)
 }
@@ -268,8 +291,9 @@ func (p timeSlice) Len() int {
 	return len(p)
 }
 
+// need to sort in reverse-chronological order to get only newest
 func (p timeSlice) Less(i, j int) bool {
-	return p[i].datetime.Before(p[j].datetime)
+	return p[j].datetime.Before(p[i].datetime)
 }
 
 func (p timeSlice) Swap(i, j int) {
@@ -277,15 +301,18 @@ func (p timeSlice) Swap(i, j int) {
 }
 
 func (ssed *ssed) parseArchive() {
+	defer timeTrack(time.Now(), "Parsing archive")
 	files, _ := filepath.Glob(path.Join(pathToTempFolder, "data", "*"))
 	ssed.entries = make(map[string]entry)
 	ssed.entryNameToUUID = make(map[string]string)
 	ssed.ordering = make(map[string][]string)
 	var entriesToSort = make(map[string]entry)
 	for _, file := range files {
-		bJson, _ := ioutil.ReadFile(file)
+		key := sha256.Sum256([]byte(ssed.password))
+		content, _ := ioutil.ReadFile(file)
+		decrypted, _ := cryptopasta.Decrypt(content, &key)
 		var entry entry
-		json.Unmarshal(bJson, &entry)
+		json.Unmarshal(decrypted, &entry)
 		entry.uuid = file
 		entry.datetime, _ = time.Parse(time.RFC3339, entry.Timestamp)
 		ssed.entries[file] = entry
@@ -298,11 +325,38 @@ func (ssed *ssed) parseArchive() {
 		sortedEntries = append(sortedEntries, d)
 	}
 	sort.Sort(sortedEntries)
+	alreadyAddedEntry := make(map[string]bool)
 	for _, entry := range sortedEntries {
+		if _, ok := alreadyAddedEntry[entry.Entry]; ok {
+			continue
+		}
 		if val, ok := ssed.ordering[entry.Document]; !ok {
 			ssed.ordering[entry.Document] = []string{entry.uuid}
 		} else {
 			ssed.ordering[entry.Document] = append(val, entry.uuid)
 		}
+		alreadyAddedEntry[entry.Entry] = true
 	}
+	// go in chronological order, so reverse list
+	for key := range ssed.ordering {
+		for i, j := 0, len(ssed.ordering[key])-1; i < j; i, j = i+1, j-1 {
+			ssed.ordering[key][i], ssed.ordering[key][j] = ssed.ordering[key][j], ssed.ordering[key][i]
+		}
+	}
+}
+
+func (ssed *ssed) GetDocument(documentName string) []entry {
+	defer timeTrack(time.Now(), "Getting document "+documentName)
+	ssed.parseArchive()
+	entries := make([]entry, len(ssed.ordering[documentName]))
+	for i, uuid := range ssed.ordering[documentName] {
+		entries[i] = ssed.entries[uuid]
+	}
+	return entries
+}
+
+// timeTrack from https://coderwall.com/p/cp5fya/measuring-execution-time-in-go
+func timeTrack(start time.Time, name string) {
+	elapsed := time.Since(start)
+	logger.Debug("%s took %s", name, elapsed)
 }

@@ -15,7 +15,14 @@ The text content is either the fulltext of that entry, or an indicator ("ignore 
 
 # Compression / Encryption
 
-The archive is a AES encrypted tar.bz2 archive. Upon use, this archive is decrypted, then decompressed, and then stored in a temp directory. When finished, the temp directory is archived and then encrypted and then shredded.
+The archive is a  tar.bz2 archive.
+Each document in the archive is encrypted in AES.
+Upon use, this archive is de-compressed, and then stored in a temp directory. Files are decrypted only when they are read.
+
+I'm aware that this makes the archive slightly larger (since it is compressing encrypted text). However, I've found that decompressing >1,000 files takes 1.5+ seconds.
+Thus, I aim to perform decompression *asynchronously*, while the password is being entered, which means the archive itself cannot be encrypted.
+Actual costs are not exorbitantly. Instead of compressing 1000 short documents from 1MB to ~50k, instead it will compress to ~200k.
+
 
 # Syncing
 
@@ -56,7 +63,7 @@ Adding entries should also done using the server, using [trix](https://trix-edit
 - Diffs will not be stored. I'd like to optionally add an entry at any point in time without rebuilding (rebasing) history.
 - Files can not be deleted. It makes synchronization easier and also the disk cost of words is VERY small so its fine to store tons of text files (~1000's)
 
-# API 
+# API
 
 These are the commands available to the user:
 
@@ -67,7 +74,7 @@ These are the commands available to the user:
 - `DeleteDocument(documentName)`: will simply Update("ignore-document",documentName,"","")
 - `DeleteEntry(documentName,entryName)`: will simply Update("ignore-entry",documentName,entryName,"")
 - `GetEntry(documentName,entryName)`: returns all versions of entry, ordered by date
-- `GetDocument(documentName)`: returns latest versions of all entries in document, ordered by date 
+- `GetDocument(documentName)`: returns latest versions of all entries in document, ordered by date
 
 Every action other than `Open()` and `Close()` will untar and decompress the archive, get the contents, and then retar it and compress (so it mostly stays in that state. Unless this is slow, then it will be open to Open and Close to do this.
 
@@ -99,6 +106,5 @@ The first element of the configuration array is the default. Anytime a different
 
 ## Implementation notes
 
-Method 1 and 2 stores files on server as `$HOME/.cache/ssed/server/username.tar.bz2`. 
+Method 1 and 2 stores files on server as `$HOME/.cache/ssed/server/username.tar.bz2`.
 Local stores files as `$HOME/.cache/ssed/local/username.tar.bz2` and the temp files (for unziping are stored in) `$HOME/.cache/ssed/temp`.
-

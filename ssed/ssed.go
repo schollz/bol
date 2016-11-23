@@ -2,6 +2,7 @@ package ssed
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -204,10 +205,11 @@ func Open(username, password, method string) (*ssed, error) {
 	// open repo
 	sourceRepo := path.Join(pathToCacheFolder, configs[0].Username+".tar.bz2")
 	if utils.Exists(sourceRepo) {
+		utils.CopyFile(sourceRepo, path.Join(pathToTempFolder, "data.tar.bz2"))
 		wd, _ := os.Getwd()
 		os.Chdir(pathToTempFolder)
 		defer timeTrack(time.Now(), "Unzipping")
-		archiver.TarGz.Open("data.tar.bz2", ".")
+		archiver.TarBz2.Open("data.tar.bz2", ".")
 		os.Chdir(wd)
 	}
 
@@ -233,10 +235,6 @@ func (ssed ssed) Update(text, documentName, entryName, timestamp string) error {
 		timestamp = time.Now().Format(time.RFC3339)
 	}
 
-	// key := sha256.Sum256([]byte(ssed.password))
-	// encrypted, _ := cryptopasta.Encrypt([]byte(text), &key)
-	// text = hex.EncodeToString(encrypted)
-
 	entry := entry{
 		Text:      text,
 		Document:  documentName,
@@ -251,7 +249,7 @@ func (ssed ssed) Update(text, documentName, entryName, timestamp string) error {
 	key := sha256.Sum256([]byte(ssed.password))
 	encrypted, _ := cryptopasta.Encrypt(b, &key)
 
-	err = ioutil.WriteFile(fileName, encrypted, 0644)
+	err = ioutil.WriteFile(fileName, []byte(hex.EncodeToString(encrypted)), 0644)
 	return err
 }
 
@@ -261,7 +259,7 @@ func (ssed ssed) Close() {
 	if utils.Exists(path.Join(pathToTempFolder, "data")) {
 		wd, _ := os.Getwd()
 		os.Chdir(pathToTempFolder)
-		archiver.TarGz.Make(ssed.pathToSourceRepo, []string{"data"})
+		archiver.TarBz2.Make(ssed.pathToSourceRepo, []string{"data"})
 		os.Chdir(wd)
 	}
 	// shred the data files
@@ -309,8 +307,18 @@ func (ssed *ssed) parseArchive() {
 	var entriesToSort = make(map[string]entry)
 	for _, file := range files {
 		key := sha256.Sum256([]byte(ssed.password))
-		content, _ := ioutil.ReadFile(file)
-		decrypted, _ := cryptopasta.Decrypt(content, &key)
+		content, err := ioutil.ReadFile(file)
+		if err != nil {
+			panic(err)
+		}
+		contentData, err := hex.DecodeString(string(content))
+		if err != nil {
+			panic(err)
+		}
+		decrypted, err := cryptopasta.Decrypt(contentData, &key)
+		if err != nil {
+			panic(err)
+		}
 		var entry entry
 		json.Unmarshal(decrypted, &entry)
 		entry.uuid = file

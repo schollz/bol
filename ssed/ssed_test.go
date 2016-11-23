@@ -92,12 +92,13 @@ func TestEntries(t *testing.T) {
 		text := strconv.Itoa(i)
 		fs.Update(text, "test", text, "")
 	}
+	fs.Close()
 
 	// check if ordering is correct
+	fs, _ = Open("zack", "test", "")
 	for _, entry := range fs.GetDocument("notes") {
 		fmt.Println(entry.Document, entry.Timestamp, entry.Text)
 	}
-
 	fs.Close()
 
 	// fs2, _ := Open("zack2", "test2", "http://something")

@@ -60,6 +60,7 @@ Adding entries should also done using the server, using [trix](https://trix-edit
 
 These are the commands available to the user:
 
+- `ListConfigs()`: method to load the configuration file and list the available configurations
 - `Open(name,password,method)`: where method is "ssh://server" or "http://server". This tells the server to attempt to pull. and create files if nessecary. The name is the name to store the repo under. The password is used to unlock the repo as well as authenticate access to the HTTP server (SSH uses private key).
 - `Close()`: closes the repo, telling it to push. Though it only pushes if it was successful pulling
 - `Update(text,documentName,entryName,date)`: make a new entry (or edit old one if entryName is not empty). date can be empty, it will fill in the current date if so

@@ -129,3 +129,9 @@ func TestEntries(t *testing.T) {
 	// fs2.Close()
 
 }
+
+func TestOpen(t *testing.T) {
+	var fs ssed
+	fs.Init("zack", "http://test")
+	fs.Open("password")
+}

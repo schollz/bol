@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jcelliott/lumber"
@@ -105,6 +106,8 @@ type document struct {
 }
 
 type ssed struct {
+	wg               sync.WaitGroup
+	havePassword     bool
 	parsed           bool
 	shredding        bool
 	pathToSourceRepo string
@@ -140,34 +143,38 @@ func (ssed *ssed) SetMethod(method string) error {
 	return nil
 }
 
-// Open allows the user to initialize a new filesystem
-// The username and password is used to authenticate
-// If the username is blank, it uses the first current user
-// The method cannot be blank for a new user
-// The method cannot be overridden with open, it must be overridden with SetMethod
-func Open(username, password, method string) (*ssed, error) {
+func (ssed *ssed) Init(username, method string) error {
 	defer timeTrack(time.Now(), "Opening archive")
 	createDirs()
+	if len(method) > 0 && !strings.Contains(method, "http") && !strings.Contains(method, "ssh") {
+		return errors.New("Method must be http or ssh")
+	}
+	if len(username) == 0 {
+		return errors.New("Must provide username")
+	}
+
+	// Load configuration
+	ssed.loadConfiguration(username, method)
+
+	// download and decompress asynchronously
+	ssed.wg = sync.WaitGroup{}
+	ssed.wg.Add(1)
+	go ssed.downloadAndDecompress()
+	return nil
+}
+
+func (ssed *ssed) loadConfiguration(username, method string) {
 	var configs []config
-	hashedPassword, _ := cryptopasta.HashPassword([]byte(password))
 	if !utils.Exists(pathToConfigFile) {
 		// Configuration file doesn't exists, create it
-		if !strings.Contains(method, "http") && !strings.Contains(method, "ssh") {
-			return &ssed{}, errors.New("Incorrect method provided")
-		}
-		if len(username) == 0 {
-			return &ssed{}, errors.New("Must provide user name")
-		}
 		configs = []config{
 			config{
-				Username:       username,
-				HashedPassword: string(hashedPassword),
-				Method:         method,
+				Username: username,
+				Method:   method,
 			},
 		}
 	} else {
 		// Configuration file already exists
-		// If the user exists, verify password and continue
 		// If the user does not exists, add user as new default and continue
 		b, _ := ioutil.ReadFile(pathToConfigFile)
 		json.Unmarshal(b, &configs)
@@ -179,24 +186,16 @@ func Open(username, password, method string) (*ssed, error) {
 			}
 			if configs[i].Username == username {
 				// check if password matches
-				if cryptopasta.CheckPasswordHash([]byte(configs[i].HashedPassword), []byte(password)) != nil {
-					return &ssed{}, errors.New("Incorrect password")
-				} else {
-					method = configs[i].Method
-				}
+				method = configs[i].Method
 				foundConfig = i
 				break
 			}
 		}
 		if foundConfig == -1 {
-			// configuration is old, but is added to the front as it will be the new default
-			if !strings.Contains(method, "http") && !strings.Contains(method, "ssh") {
-				return &ssed{}, errors.New("Incorrect method provided")
-			}
+			// configuration is new, and is added to the front as it will be the new default
 			configs = append([]config{config{
-				Username:       username,
-				HashedPassword: string(hashedPassword),
-				Method:         method,
+				Username: username,
+				Method:   method,
 			}}, configs...)
 		} else {
 			// configuration is old, but will add to front to be new default
@@ -209,8 +208,15 @@ func Open(username, password, method string) (*ssed, error) {
 	b, _ := json.MarshalIndent(configs, "", "  ")
 	ioutil.WriteFile(pathToConfigFile, b, 0644)
 
+	ssed.method = configs[0].Method
+	ssed.username = configs[0].Username
+}
+
+func (ssed *ssed) downloadAndDecompress() {
+	// download repo
+
 	// open repo
-	sourceRepo := path.Join(pathToCacheFolder, configs[0].Username+".tar.bz2")
+	sourceRepo := path.Join(pathToCacheFolder, ssed.username+".tar.bz2")
 	if utils.Exists(sourceRepo) {
 		utils.CopyFile(sourceRepo, path.Join(pathToTempFolder, "data.tar.bz2"))
 		wd, _ := os.Getwd()
@@ -219,13 +225,19 @@ func Open(username, password, method string) (*ssed, error) {
 		archiver.TarBz2.Open("data.tar.bz2", ".")
 		os.Chdir(wd)
 	}
+	fmt.Println("Finished")
+	ssed.wg.Done()
+}
 
-	return &ssed{
-		pathToSourceRepo: sourceRepo,
-		username:         configs[0].Username,
-		password:         password,
-		method:           configs[0].Method,
-	}, nil
+func (ssed *ssed) Open(password string) error {
+	// only continue if the downloading is finished
+	ssed.wg.Wait()
+	fmt.Println("Done!")
+
+	// check password
+	fmt.Println("Working...")
+
+	return nil
 }
 
 // Update make a new entry
@@ -421,6 +433,7 @@ func (ssed *ssed) GetEntry(documentName, entryName string) (entry, error) {
 	if !ssed.parsed {
 		ssed.parseArchive()
 	}
+
 	var entry entry
 	for _, uuid := range ssed.ordering[documentName] {
 		if ssed.entries[uuid].Entry == entryName {

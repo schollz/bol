@@ -289,9 +289,11 @@ func (ssed *ssed) DeleteDocument(documentName string) {
 func (ssed ssed) Close() {
 	defer timeTrack(time.Now(), "Closing archive")
 	if utils.Exists(path.Join(pathToTempFolder, "data")) {
+		logger.Debug("Archiving")
 		wd, _ := os.Getwd()
 		os.Chdir(pathToTempFolder)
-		archiver.TarBz2.Make(ssed.pathToSourceRepo, []string{"data"})
+		archiver.TarBz2.Make(ssed.username+".tar.bz2", []string{"data"})
+		utils.CopyFile(ssed.username+".tar.bz2", path.Join(pathToCacheFolder, ssed.username+".tar.bz2"))
 		os.Chdir(wd)
 	}
 	// shred the data files

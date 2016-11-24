@@ -114,7 +114,14 @@ The first element of the configuration array is the default. Anytime a different
 
 ## Implementation notes
 
-Method 1 and 2 stores files on server as `$HOME/.cache/ssed/username.tar.bz2`.
-Local stores files as `$HOME/.cache/ssed/username.tar.bz2` and the temp files (for unzipping are stored in) `$HOME/.cache/ssed/temp`.
+Paths:
+```
+pathToLocalArchive:   $HOME/.cache/ssed/local/username.tar.bz2
+pathToLocalEntries:   $HOME/.cache/ssed/local/username/
+pathToRemoteArchive:  $HOME/.cache/ssed/remote/username.tar.bz2
+pathToRemoteEntries:  $HOME/.cache/ssed/remote/username/
+pathToTemp:           $HOME/.cache/ssed/temp
+pathToConfigFile:     $HOME/.config/ssed/config.json
+```
 
-Before unzipping, the archive is moved to `$HOME/.cache/ssed/temp/data.tar.bz2` which is unzipped to `$HOME/.cache/ssed/temp/data`.
+Only `pathToTemp` contains unencrypted things, so all files in that folder should be shredded upon exit.

@@ -29,6 +29,7 @@ func main() {
 	// private views
 	http.HandleFunc("/post", PostOnly(BasicAuth(HandlePost)))
 	http.HandleFunc("/json", GetOnly(BasicAuth(HandleJSON)))
+	http.HandleFunc("/new", PutOnly(BasicAuth(HandleNew)))
 
 	log.Fatal(http.ListenAndServe(":9090", nil))
 }
@@ -62,6 +63,13 @@ func HandleJSON(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, file)
 }
 
+func HandleNew(w http.ResponseWriter, r *http.Request) {
+	username, _, _ := r.BasicAuth()
+	w.Header().Set("Content-Type", "octet-stream")
+	file, _ := os.Open(username + ".zip")
+	io.Copy(w, file)
+}
+
 func GetOnly(h handler) handler {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
@@ -79,5 +87,15 @@ func PostOnly(h handler) handler {
 			return
 		}
 		http.Error(w, "post only", http.StatusMethodNotAllowed)
+	}
+}
+
+func PutOnly(h handler) handler {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "PUT" {
+			h(w, r)
+			return
+		}
+		http.Error(w, "put only", http.StatusMethodNotAllowed)
 	}
 }

@@ -1,36 +1,30 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/schollz/bol/utils"
+	"github.com/schollz/cryptopasta"
 )
 
 // https://gist.github.com/tristanwietsma/8444cf3cb5a1ac496203
 type handler func(w http.ResponseWriter, r *http.Request)
-
-func BasicAuth(pass handler) handler {
-	return func(w http.ResponseWriter, r *http.Request) {
-		username, password, _ := r.BasicAuth()
-		if username != "username" || password != "password" {
-			http.Error(w, "authorization failed", http.StatusUnauthorized)
-			return
-		}
-		pass(w, r)
-	}
-}
 
 func main() {
 	// public views
 	http.HandleFunc("/", HandleIndex)
 
 	// private views
-	http.HandleFunc("/post", PostOnly(BasicAuth(HandlePost)))
-	http.HandleFunc("/json", GetOnly(BasicAuth(HandleJSON)))
-	http.HandleFunc("/new", PutOnly(BasicAuth(HandleNew)))
-
+	http.HandleFunc("/post", PostOnly(HandlePost))
+	http.HandleFunc("/pull", GetOnly(HandlePull))
+	http.HandleFunc("/new", PutOnly(HandleNew))
+	fmt.Println("Running on 0.0.0.0:9090")
 	log.Fatal(http.ListenAndServe(":9090", nil))
 }
 
@@ -39,35 +33,69 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandlePost(w http.ResponseWriter, r *http.Request) {
-	username, _, _ := r.BasicAuth()
-	outFile, err := os.Create(username + ".zip")
-	if err != nil {
-		panic(err)
+	username, password, _ := r.BasicAuth()
+	creds := make(map[string]string)
+	data, _ := ioutil.ReadFile("logins.json")
+	json.Unmarshal(data, &creds)
+	authenticated := false
+
+	if passwordHash, ok := creds[username]; ok {
+		if cryptopasta.CheckPasswordHash([]byte(passwordHash), []byte(password)) == nil {
+			authenticated = true
+		}
+	} else {
+		io.WriteString(w, username+" does not exist")
+		return
 	}
-	// handle err
-	defer outFile.Close()
-	_, err = io.Copy(outFile, r.Body)
-	fmt.Println("Wrote file")
-	io.WriteString(w, "thanks\n")
+
+	if authenticated {
+		fileName := username + ".tar.bz2"
+		outFile, err := os.Create(fileName)
+		if err != nil {
+			panic(err)
+		}
+		// handle err
+		defer outFile.Close()
+		_, err = io.Copy(outFile, r.Body)
+		fmt.Println("Wrote file")
+		io.WriteString(w, "thanks\n")
+	} else {
+		io.WriteString(w, "incorrect password")
+	}
+
 }
 
-type Result struct {
-	FirstName string `json:"first"`
-	LastName  string `json:"last"`
-}
-
-func HandleJSON(w http.ResponseWriter, r *http.Request) {
+func HandlePull(w http.ResponseWriter, r *http.Request) {
 	username, _, _ := r.BasicAuth()
-	w.Header().Set("Content-Type", "octet-stream")
-	file, _ := os.Open(username + ".zip")
-	io.Copy(w, file)
+	fileName := username + "tar.bz2"
+	if utils.Exists(fileName) {
+		w.Header().Set("Content-Type", "octet-stream")
+		file, _ := os.Open(username + ".zip")
+		io.Copy(w, file)
+	} else {
+		io.WriteString(w, "repo does not exist")
+	}
+
 }
 
 func HandleNew(w http.ResponseWriter, r *http.Request) {
-	username, _, _ := r.BasicAuth()
-	w.Header().Set("Content-Type", "octet-stream")
-	file, _ := os.Open(username + ".zip")
-	io.Copy(w, file)
+	username, password, _ := r.BasicAuth()
+	hashedPassword, _ := cryptopasta.HashPassword([]byte(password))
+	creds := make(map[string]string)
+
+	if utils.Exists("logins.json") {
+		data, _ := ioutil.ReadFile("logins.json")
+		json.Unmarshal(data, &creds)
+		if _, ok := creds[username]; ok {
+			io.WriteString(w, username+" already exists")
+			return
+		}
+	}
+	creds[username] = string(hashedPassword)
+	b, _ := json.MarshalIndent(creds, "", "  ")
+	ioutil.WriteFile("logins.json", b, 0644)
+	io.WriteString(w, "inserted new user, "+username)
+
 }
 
 func GetOnly(h handler) handler {

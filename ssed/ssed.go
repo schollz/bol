@@ -268,6 +268,8 @@ func (ssed *ssed) downloadAndDecompress() {
 		logger.Debug("Opening remote")
 		archiver.TarBz2.Open(ssed.archiveName, ".")
 		os.Chdir(wd)
+	} else {
+		os.Mkdir(path.Join(pathToRemoteFolder, ssed.username), 0755)
 	}
 
 	// open local repo
@@ -278,9 +280,33 @@ func (ssed *ssed) downloadAndDecompress() {
 		logger.Debug("Opening local")
 		archiver.TarBz2.Open(ssed.archiveName, ".")
 		os.Chdir(wd)
+	} else {
+		os.Mkdir(path.Join(pathToLocalFolder, ssed.username), 0755)
 	}
 	logger.Debug("Download Finished")
 	ssed.wg.Done()
+
+	// copy over files
+	ssed.copyOverFiles()
+
+}
+
+func (ssed ssed) copyOverFiles() {
+	localFiles := make(map[string]bool)
+	files, _ := filepath.Glob(path.Join(pathToLocalFolder, ssed.username, "*"))
+	for _, file := range files {
+		localFiles[filepath.Base(file)] = true
+	}
+
+	files, _ = filepath.Glob(path.Join(pathToRemoteFolder, ssed.username, "*"))
+	for _, file := range files {
+		if _, ok := localFiles[filepath.Base(file)]; !ok {
+			// local doesn't have this remote file! copy it over
+			utils.CopyFile(path.Join(pathToRemoteFolder, filepath.Base(file)), path.Join(pathToRemoteFolder, filepath.Base(file)))
+			logger.Debug("Copying over " + filepath.Base(file))
+		}
+	}
+
 }
 
 func (ssed *ssed) Open(password string) error {

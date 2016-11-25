@@ -152,6 +152,11 @@ func TestOpen(t *testing.T) {
 	fs.Update("some text3", "notes", "entry1", "2016-11-20T13:00:00-05:00")
 	fs.Update("some text4", "notes", "entry2", "2013-11-20T13:00:00-05:00")
 	fs.Update("some text3, edited", "notes", "entry1", "2016-11-23T13:00:00-05:00")
-
 	fs.Close()
+
+	os.RemoveAll(pathToLocalFolder)
+	fs.Init("zack", "http://127.0.0.1:9090")
+	fs.Open("test")
+	fs.Close()
+
 }

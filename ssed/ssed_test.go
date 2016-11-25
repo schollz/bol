@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -48,10 +49,11 @@ func TestConfig(t *testing.T) {
 }
 
 func TestEntries(t *testing.T) {
+	var text string
 	var fs ssed
 	EraseAll()
 	// Test adding a entry
-	DebugMode()
+	// DebugMode()
 	fs.Init("zack", "ssh://server1")
 	fs.Open("test")
 	fs.Update("some text", "notes", "", "2014-11-20T13:00:00-05:00")
@@ -67,36 +69,64 @@ func TestEntries(t *testing.T) {
 	// }
 
 	// check if ordering is correct
+	text = ""
 	for _, entry := range fs.GetDocument("notes") {
-		fmt.Println(entry.Document, entry.Timestamp, entry.Text)
+		text += fmt.Sprintln(entry.Document, entry.Timestamp, entry.Text)
 	}
 	fs.Close()
+	if text != `notes 2013-11-20T13:00:00-05:00 some text4
+notes 2014-11-20T13:00:00-05:00 some text
+notes 2015-11-23T13:00:00-05:00 some text2
+notes 2016-11-23T13:00:00-05:00 some text3, edited
+` {
+		t.Errorf("Ordering is not correct!")
+	}
 
 	// check if deletion of entry works
 	fs.Init("zack", "")
 	fs.Open("test")
 	fs.DeleteEntry("notes", "entry2")
+	text = ""
 	for _, entry := range fs.GetDocument("notes") {
-		fmt.Println(entry.Document, entry.Timestamp, entry.Text)
+		text += fmt.Sprintln(entry.Document, entry.Timestamp, entry.Text)
 	}
 	fs.Close()
+	if text != `notes 2014-11-20T13:00:00-05:00 some text
+notes 2015-11-23T13:00:00-05:00 some text2
+notes 2016-11-23T13:00:00-05:00 some text3, edited
+` {
+		t.Errorf("Deleting entry did not work: '%s'", text)
+	}
 
 	// check if deletion of document works
 	fs.Init("zack", "ssh://server1")
 	fs.Open("test")
-	fmt.Println(fs.ListDocuments())
+	text = fmt.Sprintln(fs.ListDocuments())
+	if text != "[notes journal]\n" {
+		t.Errorf("Initial listing of documents is wrong")
+	}
 	fs.DeleteDocument("notes")
-	fmt.Println(fs.ListDocuments())
+	text = fmt.Sprintln(fs.ListDocuments())
+	if text != "[journal]\n" {
+		t.Errorf("Listing of documents is wrong after deletion")
+	}
+	text = ""
 	for _, entry := range fs.GetDocument("notes") {
-		fmt.Println(entry.Document, entry.Timestamp, entry.Text)
+		text += fmt.Sprintln(entry.Document, entry.Timestamp, entry.Text)
 	}
 	fs.Close()
+	if text != `` {
+		t.Errorf("Document should be empty after deletion")
+	}
 
 	fs.Init("zack", "ssh://server1")
 	fs.Open("test")
 	entry, _ := fs.GetEntry("journal", "getEntry")
-	fmt.Println(entry.Document, entry.Timestamp, entry.Text)
+	text = strings.TrimSpace(fmt.Sprintln(entry.Document, entry.Timestamp, entry.Text))
 	fs.Close()
+	if text != `journal 2010-11-20T13:00:00-05:00 some other test` {
+		t.Errorf("Problem loading single entry")
+	}
 
 	// fs2, _ := Open("zack2", "test2", "http://something")
 	// fs2.Update("blah", "texts", "", "2014-11-21T13:00:00-05:00")

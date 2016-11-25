@@ -33,6 +33,8 @@ type config struct {
 var pathToConfigFile string
 var pathToCacheFolder string
 var pathToTempFolder string
+var pathToLocalFolder string
+var pathToRemoteFolder string
 var homePath string
 var logger *lumber.ConsoleLogger
 
@@ -63,9 +65,17 @@ func createDirs() {
 	if !utils.Exists(path.Join(dir, ".cache", "ssed", "temp")) {
 		os.MkdirAll(path.Join(dir, ".cache", "ssed", "temp"), 0755)
 	}
+	if !utils.Exists(path.Join(dir, ".cache", "ssed", "local")) {
+		os.MkdirAll(path.Join(dir, ".cache", "ssed", "local"), 0755)
+	}
+	if !utils.Exists(path.Join(dir, ".cache", "ssed", "remote")) {
+		os.MkdirAll(path.Join(dir, ".cache", "ssed", "remote"), 0755)
+	}
 	pathToConfigFile = path.Join(dir, ".config", "ssed", "config.json")
 	pathToCacheFolder = path.Join(dir, ".cache", "ssed")
 	pathToTempFolder = path.Join(dir, ".cache", "ssed", "temp")
+	pathToLocalFolder = path.Join(dir, ".cache", "ssed", "local")
+	pathToRemoteFolder = path.Join(dir, ".cache", "ssed", "remote")
 }
 
 func EraseConfig() {
@@ -111,14 +121,18 @@ type ssed struct {
 	parsed           bool
 	shredding        bool
 	pathToSourceRepo string
+	pathToLocalRepo  string
+	pathToRemoteRepo string
 	username         string
 	password         string
 	method           string
+	archiveName      string
 	entries          map[string]entry    // uuid -> entry
 	entryNameToUUID  map[string]string   // entry name -> uuid
 	ordering         map[string][]string // document -> list of entry uuids in order
 }
 
+// ReturnMethod returns the current method being used
 func (ssed ssed) ReturnMethod() string {
 	return ssed.method
 }
@@ -139,7 +153,7 @@ func (ssed *ssed) SetMethod(method string) error {
 		}
 	}
 	b, _ = json.MarshalIndent(configs, "", "  ")
-	ioutil.WriteFile(pathToConfigFile, b, 0644)
+	ioutil.WriteFile(pathToConfigFile, b, 0755)
 	return nil
 }
 
@@ -152,9 +166,18 @@ func (ssed *ssed) Init(username, method string) error {
 	if len(username) == 0 {
 		return errors.New("Must provide username")
 	}
-
 	// Load configuration
 	ssed.loadConfiguration(username, method)
+
+	// create nessecary folders if nessecary
+	ssed.pathToLocalRepo = path.Join(pathToCacheFolder, "local", ssed.username)
+	if !utils.Exists(ssed.pathToLocalRepo) {
+		os.MkdirAll(ssed.pathToLocalRepo, 0755)
+	}
+	ssed.pathToRemoteRepo = path.Join(pathToCacheFolder, "remote", ssed.username)
+	if !utils.Exists(ssed.pathToRemoteRepo) {
+		os.MkdirAll(ssed.pathToRemoteRepo, 0755)
+	}
 
 	// download and decompress asynchronously
 	ssed.wg = sync.WaitGroup{}
@@ -206,36 +229,35 @@ func (ssed *ssed) loadConfiguration(username, method string) {
 	}
 
 	b, _ := json.MarshalIndent(configs, "", "  ")
-	ioutil.WriteFile(pathToConfigFile, b, 0644)
+	ioutil.WriteFile(pathToConfigFile, b, 0755)
 
 	ssed.method = configs[0].Method
 	ssed.username = configs[0].Username
+	ssed.archiveName = ssed.username + ".tar.bz2"
 }
 
 func (ssed *ssed) downloadAndDecompress() {
 	// download repo
 
 	// open repo
-	sourceRepo := path.Join(pathToCacheFolder, ssed.username+".tar.bz2")
+	sourceRepo := path.Join(pathToLocalFolder, ssed.archiveName)
 	if utils.Exists(sourceRepo) {
-		utils.CopyFile(sourceRepo, path.Join(pathToTempFolder, "data.tar.bz2"))
 		wd, _ := os.Getwd()
-		os.Chdir(pathToTempFolder)
+		os.Chdir(pathToLocalFolder)
 		defer timeTrack(time.Now(), "Unzipping")
-		archiver.TarBz2.Open("data.tar.bz2", ".")
+		archiver.TarBz2.Open(ssed.archiveName, ".")
 		os.Chdir(wd)
 	}
-	fmt.Println("Finished")
+	logger.Debug("Download Finished")
 	ssed.wg.Done()
 }
 
 func (ssed *ssed) Open(password string) error {
 	// only continue if the downloading is finished
 	ssed.wg.Wait()
-	fmt.Println("Done!")
+	logger.Debug("Finished waiting")
 
 	// check password
-	fmt.Println("Working...")
 
 	return nil
 }
@@ -243,10 +265,7 @@ func (ssed *ssed) Open(password string) error {
 // Update make a new entry
 // date can be empty, it will fill in the current date if so
 func (ssed *ssed) Update(text, documentName, entryName, timestamp string) error {
-	if !utils.Exists(path.Join(pathToTempFolder, "data")) {
-		os.Mkdir(path.Join(pathToTempFolder, "data"), 0755)
-	}
-	fileName := path.Join(pathToTempFolder, "data", utils.HashAndHex(text+"file contents")+".json")
+	fileName := path.Join(ssed.pathToLocalRepo, utils.HashAndHex(text+"file contents")+".json")
 	if len(entryName) == 0 {
 		entryName = utils.RandStringBytesMaskImprSrc(10)
 	}
@@ -254,13 +273,13 @@ func (ssed *ssed) Update(text, documentName, entryName, timestamp string) error 
 		timestamp = time.Now().Format(time.RFC3339)
 	}
 
-	entry := entry{
+	e := entry{
 		Text:      text,
 		Document:  documentName,
 		Entry:     entryName,
 		Timestamp: timestamp,
 	}
-	b, err := json.MarshalIndent(entry, "", "  ")
+	b, err := json.MarshalIndent(e, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -268,7 +287,7 @@ func (ssed *ssed) Update(text, documentName, entryName, timestamp string) error 
 	key := sha256.Sum256([]byte(ssed.password))
 	encrypted, _ := cryptopasta.Encrypt(b, &key)
 
-	err = ioutil.WriteFile(fileName, []byte(hex.EncodeToString(encrypted)), 0644)
+	err = ioutil.WriteFile(fileName, []byte(hex.EncodeToString(encrypted)), 0755)
 	ssed.parsed = false
 	return err
 }
@@ -288,14 +307,11 @@ func (ssed *ssed) DeleteDocument(documentName string) {
 // Close closes the repo and pushes if it was succesful pulling
 func (ssed ssed) Close() {
 	defer timeTrack(time.Now(), "Closing archive")
-	if utils.Exists(path.Join(pathToTempFolder, "data")) {
-		logger.Debug("Archiving")
-		wd, _ := os.Getwd()
-		os.Chdir(pathToTempFolder)
-		archiver.TarBz2.Make(ssed.username+".tar.bz2", []string{"data"})
-		utils.CopyFile(ssed.username+".tar.bz2", path.Join(pathToCacheFolder, ssed.username+".tar.bz2"))
-		os.Chdir(wd)
-	}
+	logger.Debug("Archiving")
+	wd, _ := os.Getwd()
+	os.Chdir(pathToLocalFolder)
+	archiver.TarBz2.Make(ssed.archiveName, []string{ssed.username})
+	os.Chdir(wd)
 	// shred the data files
 	if ssed.shredding {
 		files, _ := filepath.Glob(path.Join(pathToTempFolder, "*", "*"))
@@ -334,7 +350,7 @@ func (p timeSlice) Swap(i, j int) {
 
 func (ssed *ssed) parseArchive() {
 	defer timeTrack(time.Now(), "Parsing archive")
-	files, _ := filepath.Glob(path.Join(pathToTempFolder, "data", "*"))
+	files, _ := filepath.Glob(path.Join(ssed.pathToLocalRepo, "*"))
 	ssed.entries = make(map[string]entry)
 	ssed.entryNameToUUID = make(map[string]string)
 	ssed.ordering = make(map[string][]string)

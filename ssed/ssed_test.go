@@ -54,7 +54,7 @@ func TestEntries(t *testing.T) {
 	EraseAll()
 	// Test adding a entry
 	// DebugMode()
-	fs.Init("zack", "ssh://server1")
+	fs.Init("zack", "http://127.0.0.1:9090")
 	fs.Open("test")
 	fs.Update("some text", "notes", "", "2014-11-20T13:00:00-05:00")
 	fs.Update("some other test", "journal", "", "2014-11-20T13:00:00-05:00")
@@ -140,7 +140,18 @@ notes 2016-11-23T13:00:00-05:00 some text3, edited
 }
 
 func TestOpen(t *testing.T) {
+	DebugMode()
+	EraseAll()
 	var fs ssed
-	fs.Init("zack", "http://test")
-	fs.Open("password")
+	fs.Init("zack", "http://127.0.0.1:9090")
+	fs.Open("test")
+	fs.Update("some text", "notes", "", "2014-11-20T13:00:00-05:00")
+	fs.Update("some other test", "journal", "", "2014-11-20T13:00:00-05:00")
+	fs.Update("some other test", "journal", "getEntry", "2010-11-20T13:00:00-05:00")
+	fs.Update("some text2", "notes", "", "2015-11-23T13:00:00-05:00")
+	fs.Update("some text3", "notes", "entry1", "2016-11-20T13:00:00-05:00")
+	fs.Update("some text4", "notes", "entry2", "2013-11-20T13:00:00-05:00")
+	fs.Update("some text3, edited", "notes", "entry1", "2016-11-23T13:00:00-05:00")
+
+	fs.Close()
 }

@@ -33,7 +33,9 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandlePost(w http.ResponseWriter, r *http.Request) {
+	log.Println("Pushed new repo")
 	username, password, _ := r.BasicAuth()
+	log.Println(r.BasicAuth())
 	creds := make(map[string]string)
 	data, _ := ioutil.ReadFile("logins.json")
 	json.Unmarshal(data, &creds)
@@ -44,6 +46,7 @@ func HandlePost(w http.ResponseWriter, r *http.Request) {
 			authenticated = true
 		}
 	} else {
+		log.Println("User does not exist")
 		io.WriteString(w, username+" does not exist")
 		return
 	}
@@ -57,9 +60,10 @@ func HandlePost(w http.ResponseWriter, r *http.Request) {
 		// handle err
 		defer outFile.Close()
 		_, err = io.Copy(outFile, r.Body)
-		fmt.Println("Wrote file")
+		log.Println("Wrote file")
 		io.WriteString(w, "thanks\n")
 	} else {
+		log.Println("Incorect password, " + password)
 		io.WriteString(w, "incorrect password")
 	}
 
@@ -67,6 +71,7 @@ func HandlePost(w http.ResponseWriter, r *http.Request) {
 
 func HandlePull(w http.ResponseWriter, r *http.Request) {
 	username, _, _ := r.BasicAuth()
+	log.Println("Got repo request from " + username)
 	fileName := username + "tar.bz2"
 	if utils.Exists(fileName) {
 		w.Header().Set("Content-Type", "octet-stream")

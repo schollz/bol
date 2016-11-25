@@ -72,10 +72,10 @@ func HandlePost(w http.ResponseWriter, r *http.Request) {
 func HandlePull(w http.ResponseWriter, r *http.Request) {
 	username, _, _ := r.BasicAuth()
 	log.Println("Got repo request from " + username)
-	fileName := username + "tar.bz2"
+	fileName := username + ".tar.bz2"
 	if utils.Exists(fileName) {
 		w.Header().Set("Content-Type", "octet-stream")
-		file, _ := os.Open(username + ".zip")
+		file, _ := os.Open(fileName)
 		io.Copy(w, file)
 	} else {
 		io.WriteString(w, "repo does not exist")

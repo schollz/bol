@@ -245,6 +245,7 @@ func (ssed *ssed) downloadAndDecompress() {
 	if err != nil {
 		panic(err)
 	}
+	req.SetBasicAuth(ssed.username, "") // no password needed
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

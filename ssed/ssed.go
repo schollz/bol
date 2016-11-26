@@ -80,28 +80,6 @@ func createDirs() {
 	pathToRemoteFolder = path.Join(dir, ".cache", "ssed", "remote")
 }
 
-func EraseConfig() {
-	utils.Shred(pathToConfigFile)
-}
-
-func EraseAll() {
-	createDirs()
-	EraseConfig()
-	os.RemoveAll(pathToCacheFolder)
-	os.RemoveAll(pathToConfigFile)
-	files, _ := filepath.Glob(path.Join(pathToCacheFolder, "*"))
-	for _, file := range files {
-		fmt.Println(file)
-	}
-}
-
-func ListConfigs() []config {
-	b, _ := ioutil.ReadFile(pathToConfigFile)
-	var configs []config
-	json.Unmarshal(b, &configs)
-	return configs
-}
-
 // Filesystem specific
 
 type entry struct {
@@ -117,7 +95,7 @@ type document struct {
 	Entries []entry
 }
 
-type ssed struct {
+type Fs struct {
 	wg               sync.WaitGroup
 	havePassword     bool
 	parsed           bool
@@ -134,12 +112,48 @@ type ssed struct {
 	ordering         map[string][]string // document -> list of entry uuids in order
 }
 
+func EraseConfig() {
+	utils.Shred(pathToConfigFile)
+}
+
+func EraseAll() {
+	createDirs()
+	EraseConfig()
+	os.RemoveAll(pathToCacheFolder)
+	os.RemoveAll(pathToConfigFile)
+	files, _ := filepath.Glob(path.Join(pathToCacheFolder, "*"))
+	for _, file := range files {
+		fmt.Println(file)
+	}
+}
+
+// CleanUp shreds all the temporary files
+func CleanUp() {
+	files, _ := filepath.Glob(path.Join(pathToTempFolder, "*"))
+	for _, file := range files {
+		logger.Debug("Shredding %s", file)
+		utils.Shred(file)
+	}
+}
+
+func ListConfigs() []config {
+	b, _ := ioutil.ReadFile(pathToConfigFile)
+	var configs []config
+	json.Unmarshal(b, &configs)
+	return configs
+}
+
 // ReturnMethod returns the current method being used
-func (ssed ssed) ReturnMethod() string {
+func (ssed Fs) ReturnMethod() string {
 	return ssed.method
 }
 
-func (ssed *ssed) SetMethod(method string) error {
+// ReturnUser returns the current user being used
+func (ssed Fs) ReturnUser() string {
+	return ssed.username
+}
+
+func (ssed *Fs) SetMethod(method string) error {
 	if !strings.Contains(method, "http") && !strings.Contains(method, "ssh") {
 		return errors.New("Incorrect method provided")
 	}
@@ -159,17 +173,20 @@ func (ssed *ssed) SetMethod(method string) error {
 	return nil
 }
 
-func (ssed *ssed) Init(username, method string) error {
+// Init initializes the repo
+// If the username and the method are left blank it will automatically use first
+// found in the config file
+func (ssed *Fs) Init(username, method string) error {
 	defer timeTrack(time.Now(), "Opening archive")
 	createDirs()
 	if len(method) > 0 && !strings.Contains(method, "http") && !strings.Contains(method, "ssh") {
 		return errors.New("Method must be http or ssh")
 	}
-	if len(username) == 0 {
-		return errors.New("Must provide username")
-	}
 	// Load configuration
-	ssed.loadConfiguration(username, method)
+	err := ssed.loadConfiguration(username, method)
+	if err != nil {
+		return err
+	}
 
 	// create nessecary folders if nessecary
 	ssed.pathToLocalRepo = path.Join(pathToCacheFolder, "local", ssed.username)
@@ -188,9 +205,12 @@ func (ssed *ssed) Init(username, method string) error {
 	return nil
 }
 
-func (ssed *ssed) loadConfiguration(username, method string) {
+func (ssed *Fs) loadConfiguration(username, method string) error {
 	var configs []config
 	if !utils.Exists(pathToConfigFile) {
+		if len(username) == 0 {
+			return errors.New("Need to have username to intialize for first time")
+		}
 		// Configuration file doesn't exists, create it
 		configs = []config{
 			config{
@@ -236,9 +256,10 @@ func (ssed *ssed) loadConfiguration(username, method string) {
 	ssed.method = configs[0].Method
 	ssed.username = configs[0].Username
 	ssed.archiveName = ssed.username + ".tar.bz2"
+	return nil
 }
 
-func (ssed *ssed) downloadAndDecompress() {
+func (ssed *Fs) downloadAndDecompress() {
 	// download repo
 	if strings.Contains(ssed.method, "http") {
 		defer timeTrack(time.Now(), "download")
@@ -293,7 +314,7 @@ func (ssed *ssed) downloadAndDecompress() {
 
 }
 
-func (ssed ssed) copyOverFiles() {
+func (ssed Fs) copyOverFiles() {
 	localFiles := make(map[string]bool)
 	files, _ := filepath.Glob(path.Join(pathToLocalFolder, ssed.username, "*"))
 	for _, file := range files {
@@ -322,7 +343,7 @@ func openAndDecrypt(filename string, password string) (string, error) {
 	return string(decrypted), err
 }
 
-func (ssed *ssed) Open(password string) error {
+func (ssed *Fs) Open(password string) error {
 	// only continue if the downloading is finished
 	ssed.wg.Wait()
 	logger.Debug("Finished waiting")
@@ -344,7 +365,7 @@ func (ssed *ssed) Open(password string) error {
 
 // Update make a new entry
 // date can be empty, it will fill in the current date if so
-func (ssed *ssed) Update(text, documentName, entryName, timestamp string) error {
+func (ssed *Fs) Update(text, documentName, entryName, timestamp string) error {
 	fileName := path.Join(ssed.pathToLocalRepo, utils.HashAndHex(text+"file contents")+".json")
 	if len(entryName) == 0 {
 		entryName = utils.RandStringBytesMaskImprSrc(10)
@@ -375,19 +396,19 @@ func (ssed *ssed) Update(text, documentName, entryName, timestamp string) error 
 }
 
 // Delete Entry will simply Update("ignore-entry",documentName,entryName,"")
-func (ssed *ssed) DeleteEntry(documentName, entryName string) {
+func (ssed *Fs) DeleteEntry(documentName, entryName string) {
 	ssed.Update("ignore entry", documentName, entryName, "")
 	ssed.parsed = false
 }
 
 // Delete Entry will simply Update("ignore document",documentName,entryName,"")
-func (ssed *ssed) DeleteDocument(documentName string) {
+func (ssed *Fs) DeleteDocument(documentName string) {
 	ssed.Update("ignore document", documentName, "", "")
 	ssed.parsed = false
 }
 
 // Close closes the repo and pushes if it was succesful pulling
-func (ssed ssed) Close() {
+func (ssed Fs) Close() {
 	defer timeTrack(time.Now(), "Closing archive")
 	if strings.Contains(ssed.method, "http") {
 		logger.Debug("Archiving")
@@ -455,7 +476,7 @@ func (p timeSlice) Swap(i, j int) {
 	p[i], p[j] = p[j], p[i]
 }
 
-func (ssed *ssed) parseArchive() {
+func (ssed *Fs) parseArchive() {
 	defer timeTrack(time.Now(), "Parsing archive")
 	files, _ := filepath.Glob(path.Join(ssed.pathToLocalRepo, "*"))
 	ssed.entries = make(map[string]entry)
@@ -514,7 +535,20 @@ func (ssed *ssed) parseArchive() {
 	ssed.parsed = true
 }
 
-func (ssed *ssed) ListDocuments() []string {
+func (ssed *Fs) ListEntries() []string {
+	if !ssed.parsed {
+		ssed.parseArchive()
+	}
+	entries := make([]string, len(ssed.entryNameToUUID))
+	i := 0
+	for entry := range ssed.entryNameToUUID {
+		entries[i] = entry
+		i++
+	}
+	return entries
+}
+
+func (ssed *Fs) ListDocuments() []string {
 	defer timeTrack(time.Now(), "Listing documents")
 	if !ssed.parsed {
 		ssed.parseArchive()
@@ -535,7 +569,7 @@ func (ssed *ssed) ListDocuments() []string {
 	return documents
 }
 
-func (ssed *ssed) GetDocument(documentName string) []entry {
+func (ssed *Fs) GetDocument(documentName string) []entry {
 	defer timeTrack(time.Now(), "Getting document "+documentName)
 	if !ssed.parsed {
 		ssed.parseArchive()
@@ -557,7 +591,7 @@ func (ssed *ssed) GetDocument(documentName string) []entry {
 	return entries[0:curEntry]
 }
 
-func (ssed *ssed) GetEntry(documentName, entryName string) (entry, error) {
+func (ssed *Fs) GetEntry(documentName, entryName string) (entry, error) {
 	defer timeTrack(time.Now(), "Getting entry "+entryName)
 	if !ssed.parsed {
 		ssed.parseArchive()

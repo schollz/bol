@@ -22,7 +22,7 @@ func TestCreateDirs(t *testing.T) {
 }
 
 func TestConfig(t *testing.T) {
-	var fs ssed
+	var fs Fs
 	EraseConfig()
 	dir, _ := homedir.Dir()
 	configFile := path.Join(dir, ".config", "ssed", "config.json")
@@ -50,7 +50,7 @@ func TestConfig(t *testing.T) {
 
 func TestEntries(t *testing.T) {
 	var text string
-	var fs ssed
+	var fs Fs
 	EraseAll()
 	// Test adding a entry
 	DebugMode()
@@ -143,7 +143,7 @@ notes 2016-11-23 13:00:00 some text3, edited
 func TestOpen(t *testing.T) {
 	DebugMode()
 	EraseAll()
-	var fs ssed
+	var fs Fs
 	fs.Init("zack", "http://127.0.0.1:9090")
 	fs.Open("test")
 	fs.Update("some text", "notes", "", "2014-11-20T13:00:00-05:00")

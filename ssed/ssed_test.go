@@ -158,5 +158,11 @@ func TestOpen(t *testing.T) {
 	fs.Init("zack", "http://127.0.0.1:9090")
 	fs.Open("test")
 	fs.Close()
+	fs.Init("zack", "http://127.0.0.1:9090")
+	err := fs.Open("test2")
+	fs.Close()
+	if err == nil {
+		t.Errorf("Not throwing error for wrong password")
+	}
 
 }

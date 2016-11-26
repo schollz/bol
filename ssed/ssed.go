@@ -302,11 +302,22 @@ func (ssed ssed) copyOverFiles() {
 	for _, file := range files {
 		if _, ok := localFiles[filepath.Base(file)]; !ok {
 			// local doesn't have this remote file! copy it over
-			utils.CopyFile(path.Join(pathToRemoteFolder, filepath.Base(file)), path.Join(pathToRemoteFolder, filepath.Base(file)))
+			utils.CopyFile(path.Join(pathToRemoteFolder, ssed.username, filepath.Base(file)), path.Join(pathToLocalFolder, ssed.username, filepath.Base(file)))
 			logger.Debug("Copying over " + filepath.Base(file))
 		}
 	}
 
+}
+
+func openAndDecrypt(filename string, password string) (string, error) {
+	key := sha256.Sum256([]byte(password))
+	content, err := ioutil.ReadFile(filename)
+	contentData, err := hex.DecodeString(string(content))
+	if err != nil {
+		return "", err
+	}
+	decrypted, err := cryptopasta.Decrypt(contentData, &key)
+	return string(decrypted), err
 }
 
 func (ssed *ssed) Open(password string) error {
@@ -314,7 +325,17 @@ func (ssed *ssed) Open(password string) error {
 	ssed.wg.Wait()
 	logger.Debug("Finished waiting")
 
-	// check password
+	// check password against one of the files (if they exist)
+	files, _ := filepath.Glob(path.Join(pathToLocalFolder, ssed.username, "*"))
+	for _, file := range files {
+		logger.Debug("Testing against %s", file)
+		_, err := openAndDecrypt(file, password)
+		if err != nil {
+			return err
+		} else {
+			break
+		}
+	}
 	ssed.password = password
 	return nil
 }

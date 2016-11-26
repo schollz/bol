@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"fmt"
@@ -36,11 +36,6 @@ func init() {
 	homePath, _ = homedir.Dir()
 }
 
-func main() {
-	DebugMode()
-	Run("notes")
-}
-
 func Run(workingFile string) {
 	var fs ssed.Fs
 	var err error
@@ -62,10 +57,15 @@ func Run(workingFile string) {
 		err = fs.Open(password)
 		if err == nil {
 			break
+		} else {
+			fmt.Println("Incorrect password.")
 		}
 	}
 	defer fs.Close()
 
+	entries := ssed.GetBlankEntries()
+	isNewEntry := true
+	logger.Debug("Working file input: '%s'", workingFile)
 	if len(workingFile) == 0 {
 		data := [][]string{}
 		for fileNum, file := range fs.ListDocuments() {
@@ -82,15 +82,26 @@ func Run(workingFile string) {
 		var document string
 		fmt.Print("Enter document: ")
 		fmt.Scanln(&document)
-		workingFile = document
+		document = strings.TrimSpace(document)
+		if i, err := strconv.Atoi(document); err == nil {
+			workingFile = data[i-1][1]
+		} else {
+			workingFile = document
+		}
+		fmt.Printf("Opening %s\n", workingFile)
+		entries = fs.GetDocument(workingFile)
+	} else {
+		logger.Debug("Parsing whether it is a document or entry")
+		entries, isNewEntry, workingFile, _ = fs.GetDocumentOrEntry(workingFile)
 	}
 
-	entries := fs.GetDocument(workingFile)
 	fullText := ""
 	for _, entry := range entries {
 		fullText += fmt.Sprintf("%s %s\n%s\n\n%s\n\n", JOURNAL_DELIMITER, entry.Entry, entry.Timestamp, strings.TrimSpace(entry.Text))
 	}
-	fullText += fmt.Sprintf("%s %s\n%s\n\n\n%s", JOURNAL_DELIMITER, utils.GetRandomMD5Hash(), utils.GetCurrentDate(), "")
+	if isNewEntry {
+		fullText += fmt.Sprintf("%s %s\n%s\n\n\n%s", JOURNAL_DELIMITER, utils.GetRandomMD5Hash(), utils.GetCurrentDate(), "")
+	}
 
 	newText := WriteEntry(fullText, "vim")
 	for _, splitText := range strings.Split(newText, JOURNAL_DELIMITER) {

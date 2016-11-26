@@ -114,6 +114,10 @@ type Fs struct {
 	ordering         map[string][]string // document -> list of entry uuids in order
 }
 
+func GetBlankEntries() []entry {
+	return []entry{}
+}
+
 func EraseConfig() {
 	utils.Shred(pathToConfigFile)
 }
@@ -390,7 +394,7 @@ func (ssed *Fs) Update(text, documentName, entryName, timestamp string) error {
 	if len(entryName) == 0 {
 		entryName = utils.RandStringBytesMaskImprSrc(10)
 	}
-	if len(timestamp) == 0 {
+	if len(timestamp) == 0 || ssed.entryExists(entryName) {
 		timestamp = utils.GetCurrentDate()
 	} else {
 		timestamp = utils.ReFormatDate(timestamp)
@@ -540,6 +544,7 @@ func (ssed *Fs) parseArchive() {
 	ssed.ordering = make(map[string][]string)
 	var entriesToSort = make(map[string]entry)
 	for _, file := range files {
+		logger.Debug("Parsing %s", file)
 		key := sha256.Sum256([]byte(ssed.password))
 		content, err := ioutil.ReadFile(file)
 		if err != nil {
@@ -553,16 +558,16 @@ func (ssed *Fs) parseArchive() {
 		if err != nil {
 			panic(err)
 		}
-		var entry entry
-		err = json.Unmarshal(decrypted, &entry)
+		var e entry
+		err = json.Unmarshal(decrypted, &e)
 		if err != nil {
 			panic(err)
 		}
-		entry.uuid = file
-		entry.datetime, _ = utils.ParseDate(entry.Timestamp)
-		ssed.entries[file] = entry
-		ssed.entryNameToUUID[entry.Entry] = file
-		entriesToSort[file] = entry
+		e.uuid = filepath.Base(file)
+		e.datetime, _ = utils.ParseDate(e.Timestamp)
+		ssed.entries[e.uuid] = e
+		entriesToSort[e.uuid] = e
+		ssed.entryNameToUUID[e.Entry] = e.uuid
 	}
 
 	sortedEntries := make(timeSlice, 0, len(entriesToSort))
@@ -625,6 +630,37 @@ func (ssed *Fs) ListDocuments() []string {
 	return documents
 }
 
+func (ssed *Fs) entryExists(entryName string) bool {
+	if !ssed.parsed {
+		ssed.parseArchive()
+	}
+	if _, ok := ssed.entryNameToUUID[entryName]; ok {
+		return true
+	}
+	return false
+}
+
+func (ssed *Fs) GetDocumentOrEntry(ambiguous string) ([]entry, bool, string, error) {
+	if !ssed.parsed {
+		ssed.parseArchive()
+	}
+	var entries []entry
+	logger.Debug("Ambiguous: %s", ambiguous)
+	for document := range ssed.ordering {
+		logger.Debug("Possible doc: %s", document)
+		if ambiguous == document {
+			return ssed.GetDocument(ambiguous), true, document, nil
+		}
+		for _, entryUUID := range ssed.ordering[document] {
+			if ssed.entries[entryUUID].Entry == ambiguous {
+				entries = []entry{ssed.entries[entryUUID]}
+				return entries, false, ssed.entries[entryUUID].Document, nil
+			}
+		}
+	}
+	return entries, true, ambiguous, errors.New("Can't find entry or document")
+}
+
 func (ssed *Fs) GetDocument(documentName string) []entry {
 	defer timeTrack(time.Now(), "Getting document "+documentName)
 	if !ssed.parsed {
@@ -653,18 +689,18 @@ func (ssed *Fs) GetEntry(documentName, entryName string) (entry, error) {
 		ssed.parseArchive()
 	}
 
-	var entry entry
+	var e entry
 	for _, uuid := range ssed.ordering[documentName] {
 		log.Println(entryName, ssed.entries[uuid].Entry)
 		if ssed.entries[uuid].Entry == entryName {
 			if ssed.entries[uuid].Text == "ignore entry" {
-				return entry, errors.New("Entry deleted")
+				return e, errors.New("Entry deleted")
 			} else {
 				return ssed.entries[uuid], nil
 			}
 		}
 	}
-	return entry, errors.New("Entry not found")
+	return e, errors.New("Entry not found")
 }
 
 // timeTrack from https://coderwall.com/p/cp5fya/measuring-execution-time-in-go

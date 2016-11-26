@@ -53,8 +53,8 @@ func TestEntries(t *testing.T) {
 	var fs ssed
 	EraseAll()
 	// Test adding a entry
-	// DebugMode()
-	fs.Init("zack", "http://127.0.0.1:9090")
+	DebugMode()
+	fs.Init("zack", "")
 	fs.Open("test")
 	fs.Update("some text", "notes", "", "2014-11-20T13:00:00-05:00")
 	fs.Update("some other test", "journal", "", "2014-11-20T13:00:00-05:00")
@@ -74,10 +74,11 @@ func TestEntries(t *testing.T) {
 		text += fmt.Sprintln(entry.Document, entry.Timestamp, entry.Text)
 	}
 	fs.Close()
-	if text != `notes 2013-11-20T13:00:00-05:00 some text4
-notes 2014-11-20T13:00:00-05:00 some text
-notes 2015-11-23T13:00:00-05:00 some text2
-notes 2016-11-23T13:00:00-05:00 some text3, edited
+	fmt.Println(text)
+	if text != `notes 2013-11-20 13:00:00 some text4
+notes 2014-11-20 13:00:00 some text
+notes 2015-11-23 13:00:00 some text2
+notes 2016-11-23 13:00:00 some text3, edited
 ` {
 		t.Errorf("Ordering is not correct!")
 	}
@@ -91,15 +92,15 @@ notes 2016-11-23T13:00:00-05:00 some text3, edited
 		text += fmt.Sprintln(entry.Document, entry.Timestamp, entry.Text)
 	}
 	fs.Close()
-	if text != `notes 2014-11-20T13:00:00-05:00 some text
-notes 2015-11-23T13:00:00-05:00 some text2
-notes 2016-11-23T13:00:00-05:00 some text3, edited
+	if text != `notes 2014-11-20 13:00:00 some text
+notes 2015-11-23 13:00:00 some text2
+notes 2016-11-23 13:00:00 some text3, edited
 ` {
 		t.Errorf("Deleting entry did not work: '%s'", text)
 	}
-
+	//
 	// check if deletion of document works
-	fs.Init("zack", "ssh://server1")
+	fs.Init("zack", "")
 	fs.Open("test")
 	text = fmt.Sprintln(fs.ListDocuments())
 	if text != "[notes journal]\n" {
@@ -119,13 +120,13 @@ notes 2016-11-23T13:00:00-05:00 some text3, edited
 		t.Errorf("Document should be empty after deletion")
 	}
 
-	fs.Init("zack", "ssh://server1")
+	fs.Init("zack", "")
 	fs.Open("test")
 	entry, _ := fs.GetEntry("journal", "getEntry")
 	text = strings.TrimSpace(fmt.Sprintln(entry.Document, entry.Timestamp, entry.Text))
 	fs.Close()
-	if text != `journal 2010-11-20T13:00:00-05:00 some other test` {
-		t.Errorf("Problem loading single entry")
+	if text != `journal 2010-11-20 13:00:00 some other test` {
+		t.Errorf("Problem loading single entry: '%s'", text)
 	}
 
 	// fs2, _ := Open("zack2", "test2", "http://something")

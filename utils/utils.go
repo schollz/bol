@@ -185,6 +185,9 @@ func ParseDate(date string) (time.Time, error) {
 	date = strings.TrimSpace(date)
 	newTime, err := time.Parse(time.RFC1123Z, date)
 	if err != nil {
+		newTime, err = time.Parse(time.RFC3339, date)
+	}
+	if err != nil {
 		newTime, err = time.Parse("2006-01-02 15:04:05", date)
 	}
 	if err != nil {
@@ -211,9 +214,17 @@ func ParseDate(date string) (time.Time, error) {
 	if err != nil {
 		newTime, err = time.Parse("2006-01-02", date)
 	}
+	if err != nil {
+		newTime, err = time.Parse("2006-01-02T15:04:05-07:00", date)
+	}
 	return newTime, err
 }
 
 func FormatDate(date time.Time) string {
 	return date.Format(DATE_FORMAT)
+}
+
+func ReFormatDate(date string) string {
+	parsedDate, _ := ParseDate(date)
+	return FormatDate(parsedDate)
 }

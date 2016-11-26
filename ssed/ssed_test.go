@@ -58,7 +58,7 @@ func TestEntries(t *testing.T) {
 	fs.Open("test")
 	fs.Update("some text", "notes", "", "2014-11-20T13:00:00-05:00")
 	fs.Update("some other test", "journal", "", "2014-11-20T13:00:00-05:00")
-	fs.Update("some other test", "journal", "getEntry", "2010-11-20T13:00:00-05:00")
+	fs.Update("some other testasdlkfj", "journal", "getEntry", "2010-11-20T13:00:00-05:00")
 	fs.Update("some text2", "notes", "", "2015-11-23T13:00:00-05:00")
 	fs.Update("some text3", "notes", "entry1", "2016-11-20T13:00:00-05:00")
 	fs.Update("some text4", "notes", "entry2", "2013-11-20T13:00:00-05:00")
@@ -80,7 +80,7 @@ notes 2014-11-20 13:00:00 some text
 notes 2015-11-23 13:00:00 some text2
 notes 2016-11-23 13:00:00 some text3, edited
 ` {
-		t.Errorf("Ordering is not correct!")
+		t.Errorf("Ordering is not correct: '%s'", text)
 	}
 
 	// check if deletion of entry works
@@ -104,7 +104,7 @@ notes 2016-11-23 13:00:00 some text3, edited
 	fs.Open("test")
 	text = fmt.Sprintln(fs.ListDocuments())
 	if text != "[notes journal]\n" {
-		t.Errorf("Initial listing of documents is wrong")
+		t.Errorf("Initial listing of documents is wrong: %v", text)
 	}
 	fs.DeleteDocument("notes")
 	text = fmt.Sprintln(fs.ListDocuments())
@@ -123,9 +123,10 @@ notes 2016-11-23 13:00:00 some text3, edited
 	fs.Init("zack", "")
 	fs.Open("test")
 	entry, _ := fs.GetEntry("journal", "getEntry")
+	fmt.Println(fs.ListEntries())
 	text = strings.TrimSpace(fmt.Sprintln(entry.Document, entry.Timestamp, entry.Text))
 	fs.Close()
-	if text != `journal 2010-11-20 13:00:00 some other test` {
+	if text != `journal 2010-11-20 13:00:00 some other testasdlkfj` {
 		t.Errorf("Problem loading single entry: '%s'", text)
 	}
 
@@ -140,7 +141,7 @@ notes 2016-11-23 13:00:00 some text3, edited
 
 }
 
-func TestOpen(t *testing.T) {
+func TestServer(t *testing.T) {
 	DebugMode()
 	EraseAll()
 	var fs Fs
@@ -163,7 +164,7 @@ func TestOpen(t *testing.T) {
 	err := fs.Open("test2")
 	fs.Close()
 	if err == nil {
-		t.Errorf("Not throwing error for wrong password")
+		t.Errorf("Server test: Not throwing error for wrong password")
 	}
 
 }

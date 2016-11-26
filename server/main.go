@@ -24,15 +24,18 @@ func main() {
 	http.HandleFunc("/post", PostOnly(HandlePost))
 	http.HandleFunc("/pull", GetOnly(HandlePull))
 	http.HandleFunc("/new", PutOnly(HandleNew))
+	http.HandleFunc("/repo", DeleteOnly(HandleErase))
 	fmt.Println("Running on 0.0.0.0:9090")
 	log.Fatal(http.ListenAndServe(":9090", nil))
 }
 
 func HandleIndex(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 	io.WriteString(w, "hello, world\n")
 }
 
 func HandlePost(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 	log.Println("Pushed new repo")
 	username, password, _ := r.BasicAuth()
 	log.Println(r.BasicAuth())
@@ -47,6 +50,7 @@ func HandlePost(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		log.Println("User does not exist")
+		w.WriteHeader(http.StatusNetworkAuthenticationRequired)
 		io.WriteString(w, username+" does not exist")
 		return
 	}
@@ -55,7 +59,8 @@ func HandlePost(w http.ResponseWriter, r *http.Request) {
 		fileName := username + ".tar.bz2"
 		outFile, err := os.Create(fileName)
 		if err != nil {
-			panic(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		// handle err
 		defer outFile.Close()
@@ -64,12 +69,42 @@ func HandlePost(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "thanks\n")
 	} else {
 		log.Println("Incorect password, " + password)
+		w.WriteHeader(http.StatusUnauthorized)
 		io.WriteString(w, "incorrect password")
 	}
 
 }
 
+func HandleErase(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	log.Println("Erasing repo")
+	username, password, _ := r.BasicAuth()
+	log.Println(r.BasicAuth())
+	creds := make(map[string]string)
+	data, _ := ioutil.ReadFile("logins.json")
+	json.Unmarshal(data, &creds)
+	authenticated := false
+
+	if passwordHash, ok := creds[username]; ok {
+		if cryptopasta.CheckPasswordHash([]byte(passwordHash), []byte(password)) == nil {
+			authenticated = true
+		}
+	} else {
+		log.Println("User does not exist")
+		w.WriteHeader(http.StatusNetworkAuthenticationRequired)
+		io.WriteString(w, username+" does not exist")
+		return
+	}
+
+	if authenticated {
+		fileName := username + ".tar.bz2"
+		os.Remove(fileName)
+	}
+
+}
+
 func HandlePull(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 	username, _, _ := r.BasicAuth()
 	log.Println("Got repo request from " + username)
 	fileName := username + ".tar.bz2"
@@ -78,12 +113,14 @@ func HandlePull(w http.ResponseWriter, r *http.Request) {
 		file, _ := os.Open(fileName)
 		io.Copy(w, file)
 	} else {
+		w.WriteHeader(http.StatusNoContent)
 		io.WriteString(w, "repo does not exist")
 	}
 
 }
 
 func HandleNew(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 	username, password, _ := r.BasicAuth()
 	hashedPassword, _ := cryptopasta.HashPassword([]byte(password))
 	creds := make(map[string]string)
@@ -130,5 +167,15 @@ func PutOnly(h handler) handler {
 			return
 		}
 		http.Error(w, "put only", http.StatusMethodNotAllowed)
+	}
+}
+
+func DeleteOnly(h handler) handler {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "DELETE" {
+			h(w, r)
+			return
+		}
+		http.Error(w, "delete only", http.StatusMethodNotAllowed)
 	}
 }

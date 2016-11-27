@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/schollz/bol/utils"
 	"github.com/schollz/cryptopasta"
@@ -51,6 +52,20 @@ func HandlePush(w http.ResponseWriter, r *http.Request) {
 
 	if authenticated {
 		fileName := username + ".tar.bz2"
+
+		// backup the previous
+		if utils.Exists(fileName) {
+			for i := 1; i < 1000000; i++ {
+				newFileName := fileName + "." + strconv.Itoa(i)
+				if utils.Exists(newFileName) {
+					continue
+				}
+				utils.CopyFile(fileName, newFileName)
+				break
+			}
+		}
+
+		os.Remove(fileName)
 		outFile, err := os.Create(fileName)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)

@@ -552,7 +552,7 @@ func (ssed *Fs) parseArchive() {
 	ssed.entries = make(map[string]entry)
 	ssed.entryNameToUUID = make(map[string]string)
 	ssed.ordering = make(map[string][]string)
-	var entriesToSort = make(map[string]entry)
+	var entriesToSortByModified = make(map[string]entry)
 	for _, file := range files {
 		logger.Debug("Parsing %s", file)
 		key := sha256.Sum256([]byte(ssed.password))
@@ -576,30 +576,43 @@ func (ssed *Fs) parseArchive() {
 		e.uuid = filepath.Base(file)
 		e.datetime, _ = utils.ParseDate(e.Timestamp)
 		if len(e.ModifiedTimestamp) > 0 {
-			e.datetime, _ = utils.ParseDate(e.ModifiedTimestamp)
+			e.datetime, _ = utils.ParseDate(e.ModifiedTimestamp) // sort by modified date
 		}
 		ssed.entries[e.uuid] = e
-		entriesToSort[e.uuid] = e
+		entriesToSortByModified[e.uuid] = e
 		ssed.entryNameToUUID[e.Entry] = e.uuid
 	}
-
-	sortedEntries := make(timeSlice, 0, len(entriesToSort))
-	for _, d := range entriesToSort {
+	sortedEntries := make(timeSlice, 0, len(entriesToSortByModified))
+	for _, d := range entriesToSortByModified {
 		sortedEntries = append(sortedEntries, d)
 	}
 	sort.Sort(sortedEntries)
+
 	alreadyAddedEntry := make(map[string]bool)
+	var entriesToSortByCreated = make(map[string]entry)
 	for _, entry := range sortedEntries {
 		if _, ok := alreadyAddedEntry[entry.Entry]; ok {
 			continue
 		}
+		alreadyAddedEntry[entry.Entry] = true
+		entry.datetime, _ = utils.ParseDate(entry.Timestamp) // sort by created date now
+		entriesToSortByCreated[entry.uuid] = entry
+	}
+	sortedEntries = make(timeSlice, 0, len(entriesToSortByCreated))
+	for _, d := range entriesToSortByCreated {
+		sortedEntries = append(sortedEntries, d)
+	}
+	sort.Sort(sortedEntries)
+
+	// put them in the ordering
+	for _, entry := range sortedEntries {
 		if val, ok := ssed.ordering[entry.Document]; !ok {
 			ssed.ordering[entry.Document] = []string{entry.uuid}
 		} else {
 			ssed.ordering[entry.Document] = append(val, entry.uuid)
 		}
-		alreadyAddedEntry[entry.Entry] = true
 	}
+
 	// go in chronological order, so reverse list
 	for key := range ssed.ordering {
 		for i, j := 0, len(ssed.ordering[key])-1; i < j; i, j = i+1, j-1 {

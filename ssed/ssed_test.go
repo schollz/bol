@@ -145,7 +145,7 @@ func TestServer(t *testing.T) {
 	DebugMode()
 	EraseAll()
 	var fs Fs
-	fs.Init("test", "http://127.0.0.1:9090")
+	fs.Init("test", "https://bol.schollz.com")
 	fs.Open("test")
 	fs.Update("some text", "notes", "", "2014-11-20T13:00:00-05:00")
 	fs.Update("some other test", "journal", "", "2014-11-20T13:00:00-05:00")
@@ -157,10 +157,10 @@ func TestServer(t *testing.T) {
 	fs.Close()
 
 	os.RemoveAll(pathToLocalFolder)
-	fs.Init("test", "http://127.0.0.1:9090")
+	fs.Init("test", "https://bol.schollz.com")
 	fs.Open("test")
 	fs.Close()
-	fs.Init("test", "http://127.0.0.1:9090")
+	fs.Init("test", "https://bol.schollz.com")
 	err := fs.Open("test2")
 	fs.Close()
 	if err == nil {

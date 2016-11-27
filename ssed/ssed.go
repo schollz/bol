@@ -188,9 +188,6 @@ func (ssed *Fs) SetMethod(method string) error {
 func (ssed *Fs) Init(username, method string) error {
 	defer timeTrack(time.Now(), "Opening archive")
 	createDirs()
-	if len(method) > 0 && !strings.Contains(method, "http") && !strings.Contains(method, "ssh") {
-		return errors.New("Method must be http or ssh")
-	}
 	// Load configuration
 	err := ssed.loadConfiguration(username, method)
 	if err != nil {
@@ -220,6 +217,9 @@ func (ssed *Fs) loadConfiguration(username, method string) error {
 		if len(username) == 0 {
 			return errors.New("Need to have username to intialize for first time")
 		}
+		if len(method) > 0 && !strings.Contains(method, "http") && !strings.Contains(method, "ssh") {
+			return errors.New("Method must be http or ssh")
+		}
 		// Configuration file doesn't exists, create it
 		configs = []config{
 			config{
@@ -247,6 +247,9 @@ func (ssed *Fs) loadConfiguration(username, method string) error {
 		}
 		if foundConfig == -1 {
 			// configuration is new, and is added to the front as it will be the new default
+			if len(method) > 0 && !strings.Contains(method, "http") && !strings.Contains(method, "ssh") {
+				return errors.New("Method must be http or ssh")
+			}
 			configs = append([]config{config{
 				Username: username,
 				Method:   method,

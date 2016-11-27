@@ -62,7 +62,7 @@ EXAMPLE USAGE:
 			ssed.EraseAll()
 		} else {
 			workingFile := c.Args().Get(0)
-			cmd.Run(workingFile)
+			cmd.Run(workingFile, ResetConfig)
 		}
 		return nil
 	}
@@ -77,6 +77,12 @@ EXAMPLE USAGE:
 			Usage:       "Deletes all bol files",
 			Destination: &Clean,
 		},
+		cli.BoolFlag{
+			Name:        "config",
+			Usage:       "Configure",
+			Destination: &ResetConfig,
+		},
+
 		// cli.StringFlag{
 		// 	Name:        "search",
 		// 	Usage:       "Search for `word`",
@@ -96,11 +102,6 @@ EXAMPLE USAGE:
 		// 	Name:        "export",
 		// 	Usage:       "Export `document`",
 		// 	Destination: &bol.Export,
-		// },
-		// cli.BoolFlag{
-		// 	Name:        "config",
-		// 	Usage:       "Configure",
-		// 	Destination: &ResetConfig,
 		// },
 		// cli.BoolFlag{
 		// 	Name:        "all, a",

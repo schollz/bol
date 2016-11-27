@@ -36,17 +36,20 @@ func init() {
 	homePath, _ = homedir.Dir()
 }
 
-func Run(workingFile string) {
+func Run(workingFile string, changeUser bool) {
 	var fs ssed.Fs
 	var err error
 	err = fs.Init("", "")
-	if err != nil {
+	if err != nil || changeUser {
 		var username, method string
 		fmt.Print("Enter username: ")
 		fmt.Scanln(&username)
-		fmt.Print("Enter method (blank for local): ")
-		fmt.Scanln(&method)
-		fs.Init(username, method)
+		err2 := fs.Init(username, "default") // should raise error if it doesn't exist
+		if err2 != nil {
+			fmt.Print("Enter method (blank for local): ")
+			fmt.Scanln(&method)
+			fs.Init(username, method)
+		}
 	} else {
 		fmt.Println(fs.ReturnUser(), fs.ReturnMethod())
 	}

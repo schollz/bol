@@ -52,8 +52,13 @@ func Run(workingFile string) {
 	}
 	for {
 		fmt.Printf("Enter password: ")
-		bytePassword, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
-		password := strings.TrimSpace(string(bytePassword))
+		var password string
+		if runtime.GOOS == "windows" {
+			fmt.Scanln(&password) // not great fix, but works for cygwin
+		} else {
+			bytePassword, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
+			password = strings.TrimSpace(string(bytePassword))
+		}
 		err = fs.Open(password)
 		if err == nil {
 			break

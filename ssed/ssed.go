@@ -317,26 +317,28 @@ func (ssed *Fs) download() error {
 func (ssed *Fs) decompress() {
 
 	// open remote repo
+	if !utils.Exists(path.Join(pathToRemoteFolder, ssed.username)) {
+		os.Mkdir(path.Join(pathToRemoteFolder, ssed.username), 0755)
+	}
 	if utils.Exists(path.Join(pathToRemoteFolder, ssed.archiveName)) {
 		wd, _ := os.Getwd()
-		os.Chdir(pathToRemoteFolder)
+		os.Chdir(path.Join(pathToRemoteFolder, ssed.username))
 		logger.Debug("Opening remote")
-		archiver.TarBz2.Open(ssed.archiveName, ".")
+		archiver.TarBz2.Open(path.Join("..", ssed.archiveName), ".")
 		os.Chdir(wd)
-	} else {
-		os.Mkdir(path.Join(pathToRemoteFolder, ssed.username), 0755)
 	}
 
 	// open local repo
 	sourceRepo := path.Join(pathToLocalFolder, ssed.archiveName)
+	if !utils.Exists(path.Join(pathToLocalFolder, ssed.username)) {
+		os.Mkdir(path.Join(pathToLocalFolder, ssed.username), 0755)
+	}
 	if utils.Exists(sourceRepo) {
 		wd, _ := os.Getwd()
-		os.Chdir(pathToLocalFolder)
+		os.Chdir(path.Join(pathToLocalFolder, ssed.username))
 		logger.Debug("Opening local")
-		archiver.TarBz2.Open(ssed.archiveName, ".")
+		archiver.TarBz2.Open(path.Join("..", ssed.archiveName), ".")
 		os.Chdir(wd)
-	} else {
-		os.Mkdir(path.Join(pathToLocalFolder, ssed.username), 0755)
 	}
 	logger.Debug("Download Finished")
 }
@@ -452,8 +454,8 @@ func (ssed *Fs) Close() {
 	defer timeTrack(time.Now(), "Closing archive")
 	logger.Debug("Archiving")
 	wd, _ := os.Getwd()
-	os.Chdir(pathToLocalFolder)
-	archiver.TarBz2.Make(ssed.archiveName, []string{ssed.username})
+	os.Chdir(path.Join(pathToLocalFolder, ssed.username))
+	archiver.TarBz2.Make(path.Join("..", ssed.archiveName), []string{"."})
 	os.Chdir(wd)
 
 	if ssed.successfulPull {

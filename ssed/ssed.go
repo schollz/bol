@@ -123,7 +123,9 @@ func EraseConfig() {
 }
 
 func EraseAll() {
+	fmt.Println("Erasing all files...")
 	createDirs()
+	CleanUp()
 	EraseConfig()
 	os.RemoveAll(pathToCacheFolder)
 	os.RemoveAll(pathToConfigFile)

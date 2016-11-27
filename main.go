@@ -58,9 +58,12 @@ EXAMPLE USAGE:
 			cmd.DebugMode()
 		}
 
-		workingFile := c.Args().Get(0)
-
-		cmd.Run(workingFile)
+		if Clean {
+			ssed.EraseAll()
+		} else {
+			workingFile := c.Args().Get(0)
+			cmd.Run(workingFile)
+		}
 		return nil
 	}
 	app.Flags = []cli.Flag{
@@ -69,11 +72,11 @@ EXAMPLE USAGE:
 			Usage:       "Turn on debug mode",
 			Destination: &Debug,
 		},
-		// cli.BoolFlag{
-		// 	Name:        "clean",
-		// 	Usage:       "Deletes all bol files",
-		// 	Destination: &Clean,
-		// },
+		cli.BoolFlag{
+			Name:        "clean",
+			Usage:       "Deletes all bol files",
+			Destination: &Clean,
+		},
 		// cli.StringFlag{
 		// 	Name:        "search",
 		// 	Usage:       "Search for `word`",

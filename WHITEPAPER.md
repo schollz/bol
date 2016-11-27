@@ -125,3 +125,8 @@ pathToConfigFile:     $HOME/.config/ssed/config.json
 ```
 
 Only `pathToTemp` contains unencrypted things, so all files in that folder should be shredded upon exit.
+
+# Exporting
+
+Exports each as an individual file with text of the entry. The filename has the rest of the meta data:
+`documentName-date-wntryName.tzt`

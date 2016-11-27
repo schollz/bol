@@ -17,14 +17,11 @@ import (
 type handler func(w http.ResponseWriter, r *http.Request)
 
 func main() {
-	// public views
 	http.HandleFunc("/", HandleIndex)
-
-	// private views
-	http.HandleFunc("/post", PostOnly(HandlePost))
-	http.HandleFunc("/pull", GetOnly(HandlePull))
-	http.HandleFunc("/new", PutOnly(HandleNew))
-	http.HandleFunc("/repo", DeleteOnly(HandleErase))
+	http.HandleFunc("/repo", PostOnly(HandlePost))    // POST latest repo
+	http.HandleFunc("/repo", GetOnly(HandlePull))     // GET latest repo
+	http.HandleFunc("/user", PutOnly(HandleNew))      // PUT new user
+	http.HandleFunc("/repo", DeleteOnly(HandleErase)) // DELETE repo
 	fmt.Println("Running on 0.0.0.0:9090")
 	log.Fatal(http.ListenAndServe(":9090", nil))
 }

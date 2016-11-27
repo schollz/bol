@@ -19,8 +19,8 @@ type handler func(w http.ResponseWriter, r *http.Request)
 func main() {
 	http.HandleFunc("/", HandleIndex)
 	http.HandleFunc("/repo", HandleRepo) // POST latest repo
-	fmt.Println("Running on 0.0.0.0:9090")
-	log.Fatal(http.ListenAndServe(":9090", nil))
+	fmt.Println("Running on 0.0.0.0:9095")
+	log.Fatal(http.ListenAndServe(":9095", nil))
 }
 
 func HandleIndex(w http.ResponseWriter, r *http.Request) {

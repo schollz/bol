@@ -395,12 +395,12 @@ func (ssed *Fs) Open(password string) error {
 // Update make a new entry
 // date can be empty, it will fill in the current date if so
 func (ssed *Fs) Update(text, documentName, entryName, timestamp string) error {
-	fileName := path.Join(ssed.pathToLocalRepo, utils.HashAndHex(text+"file contents")+".json")
-	if utils.Exists(fileName) {
-		return nil
-	}
 	if len(entryName) == 0 {
 		entryName = utils.RandStringBytesMaskImprSrc(10)
+	}
+	fileName := path.Join(ssed.pathToLocalRepo, utils.HashAndHex(text+entryName)+".json")
+	if utils.Exists(fileName) {
+		return nil
 	}
 
 	if len(timestamp) == 0 {
@@ -665,6 +665,7 @@ func (ssed *Fs) ListDocuments() []string {
 			documents = append(documents, document)
 		}
 	}
+	sort.Strings(documents)
 	return documents
 }
 

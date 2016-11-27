@@ -103,7 +103,7 @@ notes 2016-11-23 13:00:00 some text3, edited
 	fs.Init("test", "")
 	fs.Open("test")
 	text = fmt.Sprintln(fs.ListDocuments())
-	if text != "[notes journal]\n" {
+	if text != "[journal notes]\n" {
 		t.Errorf("Initial listing of documents is wrong: %v", text)
 	}
 	fs.DeleteDocument("notes")

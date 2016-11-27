@@ -322,9 +322,9 @@ func (ssed *Fs) decompress() {
 	}
 	if utils.Exists(path.Join(pathToRemoteFolder, ssed.archiveName)) {
 		wd, _ := os.Getwd()
-		os.Chdir(path.Join(pathToRemoteFolder, ssed.username))
+		os.Chdir(pathToRemoteFolder)
 		logger.Debug("Opening remote")
-		archiver.TarBz2.Open(path.Join("..", ssed.archiveName), ".")
+		archiver.TarBz2.Open(ssed.archiveName, ssed.username)
 		os.Chdir(wd)
 	}
 
@@ -335,9 +335,9 @@ func (ssed *Fs) decompress() {
 	}
 	if utils.Exists(sourceRepo) {
 		wd, _ := os.Getwd()
-		os.Chdir(path.Join(pathToLocalFolder, ssed.username))
+		os.Chdir(pathToLocalFolder)
 		logger.Debug("Opening local")
-		archiver.TarBz2.Open(path.Join("..", ssed.archiveName), ".")
+		archiver.TarBz2.Open(ssed.archiveName, ssed.username)
 		os.Chdir(wd)
 	}
 	logger.Debug("Download Finished")
@@ -455,7 +455,14 @@ func (ssed *Fs) Close() {
 	logger.Debug("Archiving")
 	wd, _ := os.Getwd()
 	os.Chdir(path.Join(pathToLocalFolder, ssed.username))
-	archiver.TarBz2.Make(path.Join("..", ssed.archiveName), []string{"."})
+	filesFullPath, _ := filepath.Glob(path.Join(pathToLocalFolder, ssed.username, "*.json"))
+	fileList := make([]string, len(filesFullPath))
+	for i, file := range filesFullPath {
+		fileList[i] = filepath.Base(file)
+		logger.Debug("archiving %s", fileList[i])
+	}
+	archiver.TarBz2.Make(ssed.archiveName, fileList)
+	os.Rename(ssed.archiveName, path.Join("..", ssed.archiveName))
 	os.Chdir(wd)
 
 	if ssed.successfulPull {

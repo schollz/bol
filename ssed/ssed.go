@@ -84,12 +84,13 @@ func createDirs() {
 // Filesystem specific
 
 type entry struct {
-	Text      string `json:"text"`
-	Timestamp string `json:"timestamp"`
-	Document  string `json:"document"`
-	Entry     string `json:"entry"`
-	datetime  time.Time
-	uuid      string
+	Text              string `json:"text"`
+	Timestamp         string `json:"timestamp"`
+	ModifiedTimestamp string `json:"modified_timestamp"`
+	Document          string `json:"document"`
+	Entry             string `json:"entry"`
+	datetime          time.Time
+	uuid              string
 }
 
 type document struct {
@@ -396,17 +397,24 @@ func (ssed *Fs) Update(text, documentName, entryName, timestamp string) error {
 	if len(entryName) == 0 {
 		entryName = utils.RandStringBytesMaskImprSrc(10)
 	}
-	if len(timestamp) == 0 || ssed.entryExists(entryName) {
+
+	if len(timestamp) == 0 {
 		timestamp = utils.GetCurrentDate()
 	} else {
 		timestamp = utils.ReFormatDate(timestamp)
 	}
 
+	modifiedTimestamp := timestamp
+	if ssed.entryExists(entryName) {
+		modifiedTimestamp = utils.GetCurrentDate()
+	}
+
 	e := entry{
-		Text:      text,
-		Document:  documentName,
-		Entry:     entryName,
-		Timestamp: timestamp,
+		Text:              text,
+		Document:          documentName,
+		Entry:             entryName,
+		Timestamp:         timestamp,
+		ModifiedTimestamp: modifiedTimestamp,
 	}
 	b, err := json.MarshalIndent(e, "", "  ")
 	if err != nil {
@@ -567,6 +575,9 @@ func (ssed *Fs) parseArchive() {
 		}
 		e.uuid = filepath.Base(file)
 		e.datetime, _ = utils.ParseDate(e.Timestamp)
+		if len(e.ModifiedTimestamp) > 0 {
+			e.datetime, _ = utils.ParseDate(e.ModifiedTimestamp)
+		}
 		ssed.entries[e.uuid] = e
 		entriesToSort[e.uuid] = e
 		ssed.entryNameToUUID[e.Entry] = e.uuid

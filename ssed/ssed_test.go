@@ -27,12 +27,12 @@ func TestConfig(t *testing.T) {
 	dir, _ := homedir.Dir()
 	configFile := path.Join(dir, ".config", "ssed", "config.json")
 
-	fs.Init("zack", "ssh://server1")
+	fs.Init("test", "ssh://server1")
 	fs.Open("test")
 	if !utils.Exists(configFile) {
 		t.Errorf("Problem creating configuation file")
 	}
-	fs.Init("zack", "ssh://server1")
+	fs.Init("test", "ssh://server1")
 	fs.Open("test")
 	if fs.ReturnMethod() != "ssh://server1" {
 		t.Errorf("Problem reloading method")
@@ -54,7 +54,7 @@ func TestEntries(t *testing.T) {
 	EraseAll()
 	// Test adding a entry
 	DebugMode()
-	fs.Init("zack", "")
+	fs.Init("test", "")
 	fs.Open("test")
 	fs.Update("some text", "notes", "", "2014-11-20T13:00:00-05:00")
 	fs.Update("some other test", "journal", "", "2014-11-20T13:00:00-05:00")
@@ -84,7 +84,7 @@ notes 2016-11-23 13:00:00 some text3, edited
 	}
 
 	// check if deletion of entry works
-	fs.Init("zack", "")
+	fs.Init("test", "")
 	fs.Open("test")
 	fs.DeleteEntry("notes", "entry2")
 	text = ""
@@ -100,7 +100,7 @@ notes 2016-11-23 13:00:00 some text3, edited
 	}
 	//
 	// check if deletion of document works
-	fs.Init("zack", "")
+	fs.Init("test", "")
 	fs.Open("test")
 	text = fmt.Sprintln(fs.ListDocuments())
 	if text != "[notes journal]\n" {
@@ -120,7 +120,7 @@ notes 2016-11-23 13:00:00 some text3, edited
 		t.Errorf("Document should be empty after deletion")
 	}
 
-	fs.Init("zack", "")
+	fs.Init("test", "")
 	fs.Open("test")
 	entry, _ := fs.GetEntry("journal", "getEntry")
 	fmt.Println(fs.ListEntries())
@@ -145,7 +145,7 @@ func TestServer(t *testing.T) {
 	DebugMode()
 	EraseAll()
 	var fs Fs
-	fs.Init("zack", "http://127.0.0.1:9090")
+	fs.Init("test", "http://127.0.0.1:9090")
 	fs.Open("test")
 	fs.Update("some text", "notes", "", "2014-11-20T13:00:00-05:00")
 	fs.Update("some other test", "journal", "", "2014-11-20T13:00:00-05:00")
@@ -157,10 +157,10 @@ func TestServer(t *testing.T) {
 	fs.Close()
 
 	os.RemoveAll(pathToLocalFolder)
-	fs.Init("zack", "http://127.0.0.1:9090")
+	fs.Init("test", "http://127.0.0.1:9090")
 	fs.Open("test")
 	fs.Close()
-	fs.Init("zack", "http://127.0.0.1:9090")
+	fs.Init("test", "http://127.0.0.1:9090")
 	err := fs.Open("test2")
 	fs.Close()
 	if err == nil {

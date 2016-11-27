@@ -122,7 +122,8 @@ func Run(workingFile string) {
 		if len(lines[0]) > 1 {
 			entryName = strings.TrimSpace(lines[0])
 		}
-		fs.Update(newEntryText, workingFile, entryName, lines[1])
+		timestamp := strings.TrimSpace(lines[1])
+		fs.Update(newEntryText, workingFile, entryName, timestamp)
 	}
 }
 

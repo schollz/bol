@@ -18,10 +18,7 @@ type handler func(w http.ResponseWriter, r *http.Request)
 
 func main() {
 	http.HandleFunc("/", HandleIndex)
-	http.HandleFunc("/repo", PostOnly(HandlePost))    // POST latest repo
-	http.HandleFunc("/repo", GetOnly(HandlePull))     // GET latest repo
-	http.HandleFunc("/user", PutOnly(HandleNew))      // PUT new user
-	http.HandleFunc("/repo", DeleteOnly(HandleErase)) // DELETE repo
+	http.HandleFunc("/repo", HandleRepo) // POST latest repo
 	fmt.Println("Running on 0.0.0.0:9090")
 	log.Fatal(http.ListenAndServe(":9090", nil))
 }
@@ -31,7 +28,7 @@ func HandleIndex(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "hello, world\n")
 }
 
-func HandlePost(w http.ResponseWriter, r *http.Request) {
+func HandlePush(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	log.Println("Pushed new repo")
 	username, password, _ := r.BasicAuth()
@@ -72,7 +69,7 @@ func HandlePost(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func HandleErase(w http.ResponseWriter, r *http.Request) {
+func HandleDelete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	log.Println("Erasing repo")
 	username, password, _ := r.BasicAuth()
@@ -135,6 +132,18 @@ func HandleNew(w http.ResponseWriter, r *http.Request) {
 	ioutil.WriteFile("logins.json", b, 0644)
 	io.WriteString(w, "inserted new user, "+username)
 
+}
+
+func HandleRepo(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		HandlePull(w, r)
+	} else if r.Method == "POST" {
+		HandlePush(w, r)
+	} else if r.Method == "DELETE" {
+		HandleDelete(w, r)
+	} else if r.Method == "PUT" {
+		HandleNew(w, r)
+	}
 }
 
 func GetOnly(h handler) handler {

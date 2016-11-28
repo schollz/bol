@@ -106,7 +106,7 @@ func HandleLoginAttempt(w http.ResponseWriter, r *http.Request) {
 			authenticated = true
 		}
 	} else {
-		log.Println("User does not exist")
+		log.Printf("User '%s' does not exist", username)
 		w.WriteHeader(http.StatusNetworkAuthenticationRequired)
 		io.WriteString(w, username+" does not exist")
 		return

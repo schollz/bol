@@ -89,6 +89,7 @@ func updateRepo(username, password, text, document, entry, date string) {
 	fs.Update(text, document, entry, date)
 	fs.Close()
 }
+
 func HandleLoginAttempt(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -178,7 +179,7 @@ func HandlePush(w http.ResponseWriter, r *http.Request) {
 		// handle err
 		defer outFile.Close()
 		_, err = io.Copy(outFile, r.Body)
-		log.Println("Wrote file")
+		log.Printf("PUSH: Wrote file for '%s'\n", username)
 		io.WriteString(w, "thanks\n")
 	} else {
 		log.Println("Incorect password, " + password)

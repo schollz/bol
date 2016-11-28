@@ -134,6 +134,7 @@ func HandlePush(w http.ResponseWriter, r *http.Request) {
 	creds := make(map[string]string)
 	data, _ := ioutil.ReadFile("logins.json")
 	json.Unmarshal(data, &creds)
+	log.Printf("%+v", creds)
 	authenticated := false
 
 	if passwordHash, ok := creds[username]; ok {

@@ -41,7 +41,7 @@ func main() {
 }
 
 func HandleLogin(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "login.html")
+	ShowLoginPage(w, r, "", "")
 }
 
 type loginInfo struct {
@@ -52,11 +52,11 @@ type loginInfo struct {
 func HandlePostAttempt(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		fmt.Fprintf(w, "Error")
+		ShowLoginPage(w, r, "Problem handling post", "danger")
 		return
 	}
 	if !strings.Contains(string(body), "=") {
-		fmt.Fprintf(w, "Did you post?")
+		ShowLoginPage(w, r, "You need to login first", "info")
 		return
 	}
 	lines := strings.Split(string(body), "=")
@@ -71,14 +71,14 @@ func HandlePostAttempt(w http.ResponseWriter, r *http.Request) {
 		password = strings.Split(val, "=")[1]
 	} else {
 		apikeys.Unlock()
-		http.ServeFile(w, r, "login.html")
+		ShowLoginPage(w, r, "Incorrect API key", "danger")
 		return
 	}
 	delete(apikeys.m, apikey)
 	apikeys.Unlock()
 
 	go updateRepo(username, password, text, document, entry, "")
-	fmt.Fprintf(w, "thanks")
+	ShowLoginPage(w, r, "Updated entry", "success")
 }
 
 func updateRepo(username, password, text, document, entry, date string) {
@@ -89,14 +89,24 @@ func updateRepo(username, password, text, document, entry, date string) {
 	fs.Close()
 }
 
+func ShowLoginPage(w http.ResponseWriter, r *http.Request, message string, messageType string) {
+	messageHTML := `<div class="alert alert-` + messageType + `">
+  ` + message + `
+</div>`
+	page, _ := ioutil.ReadFile("login.html")
+	pageS := string(page)
+	pageS = strings.Replace(pageS, "MESSAGE", messageHTML, -1)
+	fmt.Fprintf(w, "%s", pageS)
+}
+
 func HandleLoginAttempt(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		fmt.Fprintf(w, "Error")
+		ShowLoginPage(w, r, "Error reading body", "danger")
 		return
 	}
 	if !strings.Contains(string(body), "&") {
-		fmt.Fprintf(w, "Bad login attempt")
+		ShowLoginPage(w, r, "Bad login attempt", "danger")
 		return
 	}
 	data := strings.Split(string(body), "&")
@@ -112,9 +122,7 @@ func HandleLoginAttempt(w http.ResponseWriter, r *http.Request) {
 			authenticated = true
 		}
 	} else {
-		log.Printf("LOGIN: User '%s' does not exist", username)
-		w.WriteHeader(http.StatusNetworkAuthenticationRequired)
-		io.WriteString(w, username+" does not exist")
+		ShowLoginPage(w, r, "User "+username+" does not exist", "info")
 		return
 	}
 

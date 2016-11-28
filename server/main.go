@@ -82,6 +82,14 @@ func HandlePostAttempt(w http.ResponseWriter, r *http.Request) {
 	ShowLoginPage(w, r, "Updated entry", "success")
 }
 
+func deleteApikeyDelay(apikey string) {
+	time.Sleep(10 * time.Second)
+	log.Printf("Deleting apikey: %s\n", apikey)
+	apikeys.Lock()
+	delete(apikeys.m, apikey)
+	apikeys.Unlock()
+}
+
 func updateRepo(username, password, text, document, entry, date string) {
 	var fs ssed.Fs
 	fs.Init(username, "http://127.0.0.1:9095")
@@ -170,6 +178,7 @@ func HandleLoginAttempt(w http.ResponseWriter, r *http.Request) {
 		apikeys.Unlock()
 		pageS = strings.Replace(pageS, "keyXX", apikey, -1)
 		fmt.Fprintf(w, "%s", pageS)
+		go deleteApikeyDelay(apikey)
 	} else {
 		ShowLoginPage(w, r, "Incorrect password", "info")
 	}

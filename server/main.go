@@ -106,7 +106,7 @@ func HandleLoginAttempt(w http.ResponseWriter, r *http.Request) {
 			authenticated = true
 		}
 	} else {
-		log.Printf("User '%s' does not exist", username)
+		log.Printf("LOGIN: User '%s' does not exist", username)
 		w.WriteHeader(http.StatusNetworkAuthenticationRequired)
 		io.WriteString(w, username+" does not exist")
 		return
@@ -141,7 +141,7 @@ func HandlePush(w http.ResponseWriter, r *http.Request) {
 			authenticated = true
 		}
 	} else {
-		log.Println("User does not exist")
+		log.Printf("PUSH: User '%s' does not exist", username)
 		w.WriteHeader(http.StatusNetworkAuthenticationRequired)
 		io.WriteString(w, username+" does not exist")
 		return
@@ -196,7 +196,7 @@ func HandleDelete(w http.ResponseWriter, r *http.Request) {
 			authenticated = true
 		}
 	} else {
-		log.Println("User does not exist")
+		log.Printf("DELETE: User '%s' does not exist", username)
 		w.WriteHeader(http.StatusNetworkAuthenticationRequired)
 		io.WriteString(w, username+" does not exist")
 		return

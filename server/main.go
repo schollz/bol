@@ -156,7 +156,7 @@ func HandlePush(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if authenticated {
-		fileName := username + ".tar.bz2"
+		fileName := path.Join(wd, username+".tar.bz2")
 
 		// backup the previous
 		if utils.Exists(fileName) {
@@ -179,7 +179,7 @@ func HandlePush(w http.ResponseWriter, r *http.Request) {
 		// handle err
 		defer outFile.Close()
 		_, err = io.Copy(outFile, r.Body)
-		log.Printf("PUSH: Wrote file for '%s'\n", username)
+		log.Printf("PUSH: Wrote file '%s' for '%s'\n", fileName, username)
 		io.WriteString(w, "thanks\n")
 	} else {
 		log.Println("Incorect password, " + password)

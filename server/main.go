@@ -84,7 +84,7 @@ func HandlePostAttempt(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteApikeyDelay(apikey string) {
-	time.Sleep(10 * time.Second)
+	time.Sleep(30 * time.Minute)
 	log.Printf("Deleting apikey: %s\n", apikey)
 	apikeys.Lock()
 	delete(apikeys.m, apikey)

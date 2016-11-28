@@ -5,7 +5,8 @@
 `ssed` is simple synchronization of encrypted documents. `ssed` stores documents. A document is composed of entries. A single entry has:
 
 - text content, main data of entry
-- timestamp, date of that entry
+- created timestamp, when it was first created (used to sort for display)
+- modified timestamp, when it was last modified (used to sort for ignoring)
 - document name which refers to which it belongs to
 - entry name which is a unique identifier of this entry for a given document
 

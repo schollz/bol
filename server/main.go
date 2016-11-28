@@ -78,14 +78,17 @@ func HandlePostAttempt(w http.ResponseWriter, r *http.Request) {
 	apikeys.Unlock()
 
 	fmt.Println(username, password)
-	var fs ssed.Fs
-	fs.Init(username, "http://127.0.0.1:9095")
-	fs.Open(password)
-	fs.Update(text, document, entry, "")
-	fs.Close()
+	go updateRepo(username, password, text, document, entry, "")
 	fmt.Fprintf(w, "thanks")
 }
 
+func updateRepo(username, password, text, document, entry, date string) {
+	var fs ssed.Fs
+	fs.Init(username, "http://127.0.0.1:9095")
+	fs.Open(password)
+	fs.Update(text, document, entry, date)
+	fs.Close()
+}
 func HandleLoginAttempt(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {

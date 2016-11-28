@@ -136,7 +136,7 @@ func HandleLoginAttempt(w http.ResponseWriter, r *http.Request) {
 		pageS = strings.Replace(pageS, "keyXX", apikey, -1)
 		fmt.Fprintf(w, "%s", pageS)
 	} else {
-		fmt.Fprintf(w, "Denied")
+		ShowLoginPage(w, r, "Incorrect password", "info")
 	}
 }
 

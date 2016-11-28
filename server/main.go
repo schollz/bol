@@ -3,12 +3,15 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/schollz/bol/ssed"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
+	"sync"
 
 	"github.com/schollz/bol/utils"
 	"github.com/schollz/cryptopasta"
@@ -17,16 +20,110 @@ import (
 // https://gist.github.com/tristanwietsma/8444cf3cb5a1ac496203
 type handler func(w http.ResponseWriter, r *http.Request)
 
+var apikeys = struct {
+	sync.RWMutex
+	m map[string]string
+}{m: make(map[string]string)}
+
 func main() {
-	http.HandleFunc("/", HandleIndex)
+	http.HandleFunc("/", HandleLogin)
+	http.HandleFunc("/login", HandleLoginAttempt)
+	http.HandleFunc("/post", HandlePostAttempt)
+	http.HandleFunc("/static/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, r.URL.Path[1:])
+	})
 	http.HandleFunc("/repo", HandleRepo) // POST latest repo
 	fmt.Println("Running on 0.0.0.0:9095")
 	log.Fatal(http.ListenAndServe(":9095", nil))
 }
 
-func HandleIndex(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, "hello, world\n")
+func HandleLogin(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "login.html")
+}
+
+type loginInfo struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+func HandlePostAttempt(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		fmt.Fprintf(w, "Error")
+		return
+	}
+	if !strings.Contains(string(body), "=") {
+		fmt.Fprintf(w, "Did you post?")
+		return
+	}
+	lines := strings.Split(string(body), "=")
+	apikey := strings.TrimSpace(strings.Split(lines[1], "document")[0])
+	document := strings.TrimSpace(strings.Split(lines[2], "entry")[0])
+	entry := strings.TrimSpace(strings.Split(lines[3], "data")[0])
+	text := strings.Join(strings.Split(strings.TrimSpace(lines[4]), "\r"), "\n")
+	var username, password string
+	apikeys.Lock()
+	if val, ok := apikeys.m[apikey]; ok {
+		username = strings.Split(val, "=")[0]
+		password = strings.Split(val, "=")[1]
+	} else {
+		apikeys.Unlock()
+		http.ServeFile(w, r, "login.html")
+		return
+	}
+	delete(apikeys.m, apikey)
+	apikeys.Unlock()
+
+	fmt.Println(username, password)
+	var fs ssed.Fs
+	fs.Init(username, "http://127.0.0.1:9095")
+	fs.Open(password)
+	fs.Update(text, document, entry, "")
+	fs.Close()
+	fmt.Fprintf(w, "thanks")
+}
+
+func HandleLoginAttempt(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		fmt.Fprintf(w, "Error")
+		return
+	}
+	if !strings.Contains(string(body), "&") {
+		fmt.Fprintf(w, "Bad login attempt")
+		return
+	}
+	data := strings.Split(string(body), "&")
+	username := strings.TrimSpace(strings.Split(data[0], "=")[1])
+	password := strings.TrimSpace(strings.Split(data[1], "=")[1])
+	creds := make(map[string]string)
+	loginData, _ := ioutil.ReadFile("logins.json")
+	json.Unmarshal(loginData, &creds)
+	authenticated := false
+
+	if passwordHash, ok := creds[username]; ok {
+		if cryptopasta.CheckPasswordHash([]byte(passwordHash), []byte(password)) == nil {
+			authenticated = true
+		}
+	} else {
+		log.Println("User does not exist")
+		w.WriteHeader(http.StatusNetworkAuthenticationRequired)
+		io.WriteString(w, username+" does not exist")
+		return
+	}
+
+	if authenticated {
+		page, _ := ioutil.ReadFile("post.html")
+		pageS := string(page)
+		apikey := utils.RandStringBytesMaskImprSrc(30)
+		apikeys.Lock()
+		apikeys.m[apikey] = username + "=" + password
+		apikeys.Unlock()
+		pageS = strings.Replace(pageS, "keyXX", apikey, -1)
+		fmt.Fprintf(w, "%s", pageS)
+	} else {
+		fmt.Fprintf(w, "Denied")
+	}
 }
 
 func HandlePush(w http.ResponseWriter, r *http.Request) {

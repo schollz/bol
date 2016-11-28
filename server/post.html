@@ -1,0 +1,65 @@
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+
+.row {
+  margin-top: 15px;
+}
+.row.form-group {
+  padding-left: 15px;
+  padding-right: 15px;
+}
+.btn {
+  margin-left: 15px;
+}
+
+.change-link {
+  background-color: #000;
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+  bottom: 0;
+  color: #fff;
+  opacity: 0.8;
+  padding: 4px;
+  position: absolute;
+  text-align: center;
+  width: 150px;
+}
+.change-link:hover {
+  color: #fff;
+  text-decoration: none;
+}
+
+</style>
+
+<link rel="stylesheet" type="text/css" href="/static/bootstrap.min.css">
+</head>
+<body>
+<div id="form-container" class="container">
+  <form action="/post" method="post" enctype='text/plain'>
+          <input class="form-control" name="key" type="hidden" value="keyXX">
+    <div class="row">
+      <div class="col-sm-6">
+        <div class="form-group">
+          <label for="display_name">Document</label>
+          <input class="form-control" name="document" type="text" value="notes">
+        </div>
+      </div>
+      <div class="col-sm-6">
+        <div class="form-group">
+          <label for="location">Entry</label>
+          <input class="form-control"  name="entry" type="text" value="">
+        </div>
+      </div>
+    </div>
+    <div class="row form-group">
+      <textarea class="form-control" rows="5" name="data" id="text"></textarea>
+    <div class="row">
+      <button class="btn btn-primary" type="submit">Save</button>
+    </div>
+  </form>
+</div>
+</body>
+
+</html>

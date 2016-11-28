@@ -31,6 +31,7 @@ func main() {
 	wd, _ = os.Getwd()
 	http.HandleFunc("/", HandleLogin)
 	http.HandleFunc("/login", HandleLoginAttempt)
+	http.HandleFunc("/register", HandleRegisterAttempt)
 	http.HandleFunc("/post", HandlePostAttempt)
 	http.HandleFunc("/static/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, r.URL.Path[1:])
@@ -100,6 +101,37 @@ func ShowLoginPage(w http.ResponseWriter, r *http.Request, message string, messa
 	pageS := string(page)
 	pageS = strings.Replace(pageS, "MESSAGE", messageHTML, -1)
 	fmt.Fprintf(w, "%s", pageS)
+}
+
+func HandleRegisterAttempt(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		ShowLoginPage(w, r, "Error reading body", "danger")
+		return
+	}
+	if !strings.Contains(string(body), "&") {
+		ShowLoginPage(w, r, "Bad login attempt", "danger")
+		return
+	}
+	data := strings.Split(string(body), "&")
+	username := strings.TrimSpace(strings.Split(data[0], "=")[1])
+	password := strings.TrimSpace(strings.Split(data[1], "=")[1])
+
+	hashedPassword, _ := cryptopasta.HashPassword([]byte(password))
+	creds := make(map[string]string)
+
+	if utils.Exists(path.Join(wd, "logins.json")) {
+		data, _ := ioutil.ReadFile(path.Join(wd, "logins.json"))
+		json.Unmarshal(data, &creds)
+		if _, ok := creds[username]; ok {
+			ShowLoginPage(w, r, "User '"+username+"' already exists", "info")
+			return
+		}
+	}
+	creds[username] = string(hashedPassword)
+	b, _ := json.MarshalIndent(creds, "", "  ")
+	ioutil.WriteFile(path.Join(wd, "logins.json"), b, 0644)
+	ShowLoginPage(w, r, "Added user '"+username+"'", "success")
 }
 
 func HandleLoginAttempt(w http.ResponseWriter, r *http.Request) {
@@ -261,7 +293,6 @@ func HandleNew(w http.ResponseWriter, r *http.Request) {
 	b, _ := json.MarshalIndent(creds, "", "  ")
 	ioutil.WriteFile(path.Join(wd, "logins.json"), b, 0644)
 	io.WriteString(w, "inserted new user, "+username)
-
 }
 
 func HandleRepo(w http.ResponseWriter, r *http.Request) {

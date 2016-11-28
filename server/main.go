@@ -77,7 +77,6 @@ func HandlePostAttempt(w http.ResponseWriter, r *http.Request) {
 	delete(apikeys.m, apikey)
 	apikeys.Unlock()
 
-	fmt.Println(username, password)
 	go updateRepo(username, password, text, document, entry, "")
 	fmt.Fprintf(w, "thanks")
 }

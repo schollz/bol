@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,12 +21,14 @@ import (
 // https://gist.github.com/tristanwietsma/8444cf3cb5a1ac496203
 type handler func(w http.ResponseWriter, r *http.Request)
 
+var wd string
 var apikeys = struct {
 	sync.RWMutex
 	m map[string]string
 }{m: make(map[string]string)}
 
 func main() {
+	wd, _ = os.Getwd()
 	http.HandleFunc("/", HandleLogin)
 	http.HandleFunc("/login", HandleLoginAttempt)
 	http.HandleFunc("/post", HandlePostAttempt)
@@ -97,7 +100,7 @@ func HandleLoginAttempt(w http.ResponseWriter, r *http.Request) {
 	username := strings.TrimSpace(strings.Split(data[0], "=")[1])
 	password := strings.TrimSpace(strings.Split(data[1], "=")[1])
 	creds := make(map[string]string)
-	loginData, _ := ioutil.ReadFile("logins.json")
+	loginData, _ := ioutil.ReadFile(path.Join(wd, "logins.json"))
 	json.Unmarshal(loginData, &creds)
 	authenticated := false
 
@@ -132,7 +135,7 @@ func HandlePush(w http.ResponseWriter, r *http.Request) {
 	username, password, _ := r.BasicAuth()
 	log.Println(r.BasicAuth())
 	creds := make(map[string]string)
-	data, _ := ioutil.ReadFile("logins.json")
+	data, _ := ioutil.ReadFile(path.Join(wd, "logins.json"))
 	json.Unmarshal(data, &creds)
 	log.Printf("%+v", creds)
 	authenticated := false
@@ -188,7 +191,7 @@ func HandleDelete(w http.ResponseWriter, r *http.Request) {
 	username, password, _ := r.BasicAuth()
 	log.Println(r.BasicAuth())
 	creds := make(map[string]string)
-	data, _ := ioutil.ReadFile("logins.json")
+	data, _ := ioutil.ReadFile(path.Join(wd, "logins.json"))
 	json.Unmarshal(data, &creds)
 	authenticated := false
 
@@ -232,8 +235,8 @@ func HandleNew(w http.ResponseWriter, r *http.Request) {
 	hashedPassword, _ := cryptopasta.HashPassword([]byte(password))
 	creds := make(map[string]string)
 
-	if utils.Exists("logins.json") {
-		data, _ := ioutil.ReadFile("logins.json")
+	if utils.Exists(path.Join(wd, "logins.json")) {
+		data, _ := ioutil.ReadFile(path.Join(wd, "logins.json"))
 		json.Unmarshal(data, &creds)
 		if _, ok := creds[username]; ok {
 			io.WriteString(w, username+" already exists")
@@ -242,7 +245,7 @@ func HandleNew(w http.ResponseWriter, r *http.Request) {
 	}
 	creds[username] = string(hashedPassword)
 	b, _ := json.MarshalIndent(creds, "", "  ")
-	ioutil.WriteFile("logins.json", b, 0644)
+	ioutil.WriteFile(path.Join(wd, "logins.json"), b, 0644)
 	io.WriteString(w, "inserted new user, "+username)
 
 }

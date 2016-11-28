@@ -90,9 +90,9 @@ func updateRepo(username, password, text, document, entry, date string) {
 }
 
 func ShowLoginPage(w http.ResponseWriter, r *http.Request, message string, messageType string) {
-	messageHTML := `<div class="alert alert-` + messageType + `">
+	messageHTML := `<div class="col-xs-12"><div class="alert alert-` + messageType + `">
   ` + message + `
-</div>`
+</div></div>`
 	page, _ := ioutil.ReadFile("login.html")
 	pageS := string(page)
 	pageS = strings.Replace(pageS, "MESSAGE", messageHTML, -1)

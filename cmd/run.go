@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -34,6 +35,15 @@ func init() {
 	logger = lumber.NewConsoleLogger(lumber.DEBUG)
 	logger.Level(2)
 	homePath, _ = homedir.Dir()
+	if !utils.Exists(path.Join(homePath, ".cache")) {
+		os.MkdirAll(path.Join(homePath, ".cache"), 0755)
+	}
+	if !utils.Exists(path.Join(homePath, ".cache", "ssed")) {
+		os.MkdirAll(path.Join(homePath, ".cache", "ssed"), 0755)
+	}
+	if !utils.Exists(path.Join(homePath, ".cache", "ssed", "temp")) {
+		os.MkdirAll(path.Join(homePath, ".cache", "ssed", "temp"), 0755)
+	}
 }
 
 func Run(workingFile string, changeUser bool) {
@@ -226,34 +236,45 @@ com! WPCLI call WordProcessorModeCLI()`
 		extension = ".exe"
 	}
 
-	// // Load from binary assets
-	// logger.Debug("Trying to get asset: %s", "bin/"+editor+extension)
-	// data, err := Asset("bin/" + editor + extension)
-	// if err == nil {
-	// 	logger.Debug("Using builtin editor: %s", "bin/"+editor+extension)
-	// 	err = ioutil.WriteFile(path.Join(ssed.PathToTempFolder, editor+extension), data, 0755)
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	editor = path.Join(ssed.PathToTempFolder, editor)
-	// } else {
-	// 	logger.Debug("Could not find builtin editor: %s", err.Error())
-	// }
+	// Load from binary assets
+	logger.Debug("Trying to get asset: %s", "bin/"+editor+extension)
+	data, err := Asset("bin/" + editor + extension)
+	if err == nil {
+		logger.Debug("Using builtin editor: %s", "bin/"+editor+extension)
+		err = ioutil.WriteFile(path.Join(homePath, ".cache", "ssed", "temp", editor+extension), data, 0755)
+		if err != nil {
+			log.Fatal(err)
+		}
+		editor = path.Join(homePath, ".cache", "ssed", "temp", editor)
+	} else {
+		logger.Debug("Could not find builtin editor: %s", err.Error())
+	}
 
-	logger.Debug("Using editor %s", editor)
 	// Run the editor
+	logger.Debug("Using editor %s", editor+extension)
 	cmd := exec.Command(editor+extension, cmdArgs...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
+		// Try to execute from the same folder
+		logger.Debug("Error running: %s", err.Error())
 		programPath, _ := osext.ExecutableFolder()
+		editor = filepath.Base(editor)
 		cmd := exec.Command(path.Join(programPath, editor+extension), cmdArgs...)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		err2 := cmd.Run()
 		if err2 != nil {
-			log.Fatal(err2)
+			// Try to execute from system path
+			logger.Debug("Error running: %s", err.Error())
+			cmd := exec.Command(editor+extension, cmdArgs...)
+			cmd.Stdin = os.Stdin
+			cmd.Stdout = os.Stdout
+			err3 := cmd.Run()
+			if err3 != nil {
+				log.Fatal(err3)
+			}
 		}
 	}
 	fileContents, _ := ioutil.ReadFile(path.Join(ssed.PathToTempFolder, "temp"))

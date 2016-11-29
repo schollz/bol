@@ -54,12 +54,14 @@ func Run(workingFile string, changeUser bool) {
 		var username, method string
 		fmt.Print("Enter username: ")
 		fmt.Scanln(&username)
-		err2 := fs.Init(username, "default") // should raise error if it doesn't exist
-		if err2 != nil {
-			fmt.Print("Enter method (blank for local): ")
-			fmt.Scanln(&method)
-			fs.Init(username, method)
-		}
+		method = "https://bol.schollz.com"
+		fs.Init(username, method)
+		//err2 := fs.Init(username, "https://bol.schollz.com") // should raise error if it doesn't exist
+		// if err2 != nil {
+		// 	fmt.Print("Enter method (default https://bol.schollz.com): ")
+		// 	fmt.Scanln(&method)
+		// 	fs.Init(username, method)
+		// }
 	} else {
 		fmt.Println(fs.ReturnUser(), fs.ReturnMethod())
 	}

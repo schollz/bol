@@ -259,6 +259,7 @@ com! WPCLI call WordProcessorModeCLI()`
 	cmd.Stdout = os.Stdout
 	err = cmd.Run()
 	if err != nil {
+		logger.Debug("Failed using builtin")
 		// Try to execute from the same folder
 		logger.Debug("Error running: %s", err.Error())
 		programPath, _ := osext.ExecutableFolder()
@@ -268,6 +269,7 @@ com! WPCLI call WordProcessorModeCLI()`
 		cmd.Stdout = os.Stdout
 		err2 := cmd.Run()
 		if err2 != nil {
+			logger.Debug("Failed using from same folder as executable")
 			// Try to execute from system path
 			logger.Debug("Error running: %s", err.Error())
 			cmd := exec.Command(editor+extension, cmdArgs...)
@@ -275,6 +277,7 @@ com! WPCLI call WordProcessorModeCLI()`
 			cmd.Stdout = os.Stdout
 			err3 := cmd.Run()
 			if err3 != nil {
+				logger.Debug("Failed using from system path")
 				log.Fatal(err3)
 			}
 		}

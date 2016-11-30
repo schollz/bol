@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -240,6 +241,7 @@ com! WPCLI call WordProcessorModeCLI()`
 
 	// Load from binary assets
 	logger.Debug("Trying to get asset: %s", "bin/"+editor+extension)
+	tryBuiltin := false
 	data, err := Asset("bin/" + editor + extension)
 	if err == nil {
 		logger.Debug("Using builtin editor: %s", "bin/"+editor+extension)
@@ -247,19 +249,22 @@ com! WPCLI call WordProcessorModeCLI()`
 		if err != nil {
 			log.Fatal(err)
 		}
-		editor = path.Join(homePath, ".cache", "ssed", "temp", editor)
+		tryBuiltin = true
 	} else {
 		logger.Debug("Could not find builtin editor: %s", err.Error())
 	}
 
 	// Run the editor
-	logger.Debug("Using editor %s", editor+extension)
-	cmd := exec.Command(editor+extension, cmdArgs...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	err = cmd.Run()
+	err = errors.New("Editor not run")
+	if tryBuiltin {
+		logger.Debug("Using builtin editor %s", editor+extension)
+		cmd := exec.Command(path.Join(homePath, ".cache", "ssed", "temp", editor+extension), cmdArgs...)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		err = cmd.Run()
+	}
 	if err != nil {
-		logger.Debug("Failed using builtin")
+		logger.Debug("Not using builtin")
 		// Try to execute from the same folder
 		logger.Debug("Error running: %s", err.Error())
 		programPath, _ := osext.ExecutableFolder()

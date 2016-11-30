@@ -222,7 +222,7 @@ func (ssed *Fs) loadConfiguration(username, method string) error {
 		}
 		// Configuration file doesn't exists, create it
 		configs = []config{
-			config{
+			{
 				Username: username,
 				Method:   method,
 			},
@@ -250,7 +250,7 @@ func (ssed *Fs) loadConfiguration(username, method string) error {
 			if len(method) > 0 && !strings.Contains(method, "http") && !strings.Contains(method, "ssh") {
 				return errors.New("Method must be http or ssh")
 			}
-			configs = append([]config{config{
+			configs = append([]config{{
 				Username: username,
 				Method:   method,
 			}}, configs...)
@@ -373,8 +373,10 @@ func openAndDecrypt(filename string, password string) (string, error) {
 }
 
 func (ssed *Fs) Open(password string) error {
+	fmt.Print("\nSyncing...")
 	// only continue if the downloading is finished
 	ssed.wg.Wait()
+	fmt.Print("done.\n")
 	logger.Debug("Finished waiting")
 
 	// check password against one of the files (if they exist)

@@ -55,7 +55,11 @@ func Run(workingFile string, changeUser bool) {
 		var username, method string
 		fmt.Print("Enter username: ")
 		fmt.Scanln(&username)
-		method = "https://bol.schollz.com"
+		fmt.Print("Enter method (blank for bol): ")
+		fmt.Scanln(&method)
+		if len(method) == "" {
+			method = "https://bol.schollz.com"
+		}
 		fs.Init(username, method)
 		//err2 := fs.Init(username, "https://bol.schollz.com") // should raise error if it doesn't exist
 		// if err2 != nil {

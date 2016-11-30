@@ -57,7 +57,7 @@ func Run(workingFile string, changeUser bool) {
 		fmt.Scanln(&username)
 		fmt.Print("Enter method (blank for bol): ")
 		fmt.Scanln(&method)
-		if len(method) == "" {
+		if len(method) == 0 {
 			method = "https://bol.schollz.com"
 		}
 		fs.Init(username, method)

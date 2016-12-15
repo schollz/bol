@@ -65,7 +65,7 @@ func HandlePostAttempt(w http.ResponseWriter, r *http.Request) {
 	apikey := strings.TrimSpace(strings.Split(lines[1], "document")[0])
 	document := strings.TrimSpace(strings.Split(lines[2], "entry")[0])
 	entry := strings.TrimSpace(strings.Split(lines[3], "data")[0])
-	text := strings.Join(strings.Split(strings.TrimSpace(lines[4]), "\r"), "\n")
+	text := strings.Join(strings.Split(strings.TrimSpace(lines[4]), "\r"), "")
 	var username, password string
 	apikeys.Lock()
 	if val, ok := apikeys.m[apikey]; ok {

@@ -125,6 +125,10 @@ func HandleRegisterAttempt(w http.ResponseWriter, r *http.Request) {
 	data := strings.Split(string(body), "&")
 	username := strings.TrimSpace(strings.Split(data[0], "=")[1])
 	password := strings.TrimSpace(strings.Split(data[1], "=")[1])
+	if len(username) == 0 && len(password) == 0 {
+		ShowLoginPage(w, r, "Username and password must not be empty", "danger")
+		return
+	}
 
 	hashedPassword, _ := cryptopasta.HashPassword([]byte(password))
 	creds := make(map[string]string)

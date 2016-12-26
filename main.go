@@ -16,6 +16,7 @@ import (
 
 var (
 	Version, BuildTime, Build, OS, LastCommit string
+	DumpFileName                              string
 	Debug                                     bool
 	DontEncrypt, Clean                        bool
 	ResetConfig                               bool
@@ -62,7 +63,7 @@ EXAMPLE USAGE:
 			ssed.EraseAll()
 		} else {
 			workingFile := c.Args().Get(0)
-			cmd.Run(workingFile, ResetConfig)
+			cmd.Run(workingFile, ResetConfig, DumpFileName)
 		}
 		return nil
 	}
@@ -82,12 +83,11 @@ EXAMPLE USAGE:
 			Usage:       "Configure",
 			Destination: &ResetConfig,
 		},
-
-		// cli.StringFlag{
-		// 	Name:        "search",
-		// 	Usage:       "Search for `word`",
-		// 	Destination: &bol.Search,
-		// },
+		cli.StringFlag{
+			Name:        "dump",
+			Usage:       "Dump to `file`",
+			Destination: &DumpFileName,
+		},
 		// cli.BoolFlag{
 		// 	Name:        "importold",
 		// 	Usage:       "Import `document` (JRNL-format)",

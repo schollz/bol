@@ -90,7 +90,7 @@ func Run(workingFile string, changeUser bool, dumpFileName string) {
 
 	if dumpFileName != "" {
 		fs.DumpAll(dumpFileName)
-		fmt.Printf("Dumped to %s", dumpFileName)
+		fmt.Printf("Dumped to %s\n", dumpFileName)
 		return
 	}
 

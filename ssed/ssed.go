@@ -762,7 +762,9 @@ func (ssed *Fs) GetEntry(documentName, entryName string) (entry, error) {
 
 func (ssed *Fs) DumpAll(filename string) {
 	files, _ := filepath.Glob(path.Join(ssed.pathToLocalRepo, "*"))
-	documents := make(map[string]document)
+
+	ssed.entries = make(map[string]entry)
+	var entriesToSortByModified = make(map[string]entry)
 	for _, file := range files {
 		logger.Debug("Parsing %s", file)
 		key := sha256.Sum256([]byte(ssed.password))
@@ -788,21 +790,36 @@ func (ssed *Fs) DumpAll(filename string) {
 		if len(e.ModifiedTimestamp) > 0 {
 			e.datetime, _ = utils.ParseDate(e.ModifiedTimestamp) // sort by modified date
 		}
-		if _, ok := documents[e.Document]; !ok {
-			documents[e.Document] = document{Name: e.Document}
-		}
-		entries := documents[e.Document].Entries
-		entries = append(entries, e)
-		documents[e.Document] = document{Name: e.Document, Entries: entries}
+		ssed.entries[e.uuid] = e
+		entriesToSortByModified[e.uuid] = e
 	}
-	documentList := make([]document, len(documents))
+	sortedEntries := make(timeSlice, 0, len(entriesToSortByModified))
+	for _, d := range entriesToSortByModified {
+		sortedEntries = append(sortedEntries, d)
+	}
+	sort.Sort(sortedEntries)
+
+	// Add sorted entries to document
+	documentMap := make(map[string]document)
+	for _, e := range sortedEntries {
+		if _, ok := documentMap[e.Document]; !ok {
+			documentMap[e.Document] = document{Name: e.Document}
+		}
+		entries := documentMap[e.Document].Entries
+		entries = append(entries, e)
+		documentMap[e.Document] = document{Name: e.Document, Entries: entries}
+	}
+
+	// Make a array from them
+	documentList := make([]document, len(documentMap))
 	i := 0
-	for doc := range documents {
-		documentList[i] = documents[doc]
+	for doc := range documentMap {
+		documentList[i] = documentMap[doc]
 		i++
 	}
 	bJson, _ := json.MarshalIndent(documentList, "", " ")
 	ioutil.WriteFile(filename, bJson, 0644)
+	fmt.Println(string(bJson))
 }
 
 // timeTrack from https://coderwall.com/p/cp5fya/measuring-execution-time-in-go

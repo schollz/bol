@@ -819,7 +819,6 @@ func (ssed *Fs) DumpAll(filename string) {
 	}
 	bJson, _ := json.MarshalIndent(documentList, "", " ")
 	ioutil.WriteFile(filename, bJson, 0644)
-	fmt.Println(string(bJson))
 }
 
 // timeTrack from https://coderwall.com/p/cp5fya/measuring-execution-time-in-go

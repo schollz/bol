@@ -130,6 +130,7 @@ notes 2016-11-23 13:00:00 some text3, edited
 		t.Errorf("Problem loading single entry: '%s'", text)
 	}
 
+	fs.DumpAll("test.json")
 	// fs2, _ := Open("zack2", "test2", "http://something")
 	// fs2.Update("blah", "texts", "", "2014-11-21T13:00:00-05:00")
 	// fs2.Update("ghjgjgj", "texts", "", "2014-11-20T13:00:00-05:00")

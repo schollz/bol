@@ -94,6 +94,7 @@ type entry struct {
 }
 
 type document struct {
+	Name    string
 	Entries []entry
 }
 
@@ -742,6 +743,66 @@ func (ssed *Fs) GetEntry(documentName, entryName string) (entry, error) {
 		}
 	}
 	return e, errors.New("Entry not found")
+}
+
+// func (ssed *Fs) Dump(filename string) {
+// 	ssed.parseArchive()
+// 	for docName := range ssed.ordering {
+// 		var doc document
+// 		doc.Name = docName
+// 		doc.Entries = make([]entry, len(ssed.ordering[docName]))
+// 		for i, uuid := range ssed.ordering[docName] {
+// 			doc.Entries[i] = ssed.entries[uuid]
+// 		}
+// 		bJson, _ := json.MarshalIndent(doc, "", " ")
+// 		fmt.Println(string(bJson))
+// 	}
+// 	ioutil.WriteFile(filename, bJson, 0644)
+// }
+
+func (ssed *Fs) DumpAll(filename string) {
+	files, _ := filepath.Glob(path.Join(ssed.pathToLocalRepo, "*"))
+	documents := make(map[string]document)
+	for _, file := range files {
+		logger.Debug("Parsing %s", file)
+		key := sha256.Sum256([]byte(ssed.password))
+		content, err := ioutil.ReadFile(file)
+		if err != nil {
+			panic(err)
+		}
+		contentData, err := hex.DecodeString(string(content))
+		if err != nil {
+			panic(err)
+		}
+		decrypted, err := cryptopasta.Decrypt(contentData, &key)
+		if err != nil {
+			panic(err)
+		}
+		var e entry
+		err = json.Unmarshal(decrypted, &e)
+		if err != nil {
+			panic(err)
+		}
+		e.uuid = filepath.Base(file)
+		e.datetime, _ = utils.ParseDate(e.Timestamp)
+		if len(e.ModifiedTimestamp) > 0 {
+			e.datetime, _ = utils.ParseDate(e.ModifiedTimestamp) // sort by modified date
+		}
+		if _, ok := documents[e.Document]; !ok {
+			documents[e.Document] = document{Name: e.Document}
+		}
+		entries := documents[e.Document].Entries
+		entries = append(entries, e)
+		documents[e.Document] = document{Name: e.Document, Entries: entries}
+	}
+	documentList := make([]document, len(documents))
+	i := 0
+	for doc := range documents {
+		documentList[i] = documents[doc]
+		i++
+	}
+	bJson, _ := json.MarshalIndent(documentList, "", " ")
+	ioutil.WriteFile(filename, bJson, 0644)
 }
 
 // timeTrack from https://coderwall.com/p/cp5fya/measuring-execution-time-in-go

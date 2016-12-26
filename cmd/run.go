@@ -47,7 +47,7 @@ func init() {
 	}
 }
 
-func Run(workingFile string, changeUser bool) {
+func Run(workingFile string, changeUser bool, dumpFileName string) {
 	var fs ssed.Fs
 	var err error
 	err = fs.Init("", "")
@@ -87,6 +87,12 @@ func Run(workingFile string, changeUser bool) {
 		}
 	}
 	defer fs.Close()
+
+	if dumpFileName != "" {
+		fs.DumpAll(dumpFileName)
+		fmt.Printf("Dumped to %s", dumpFileName)
+		return
+	}
 
 	entries := ssed.GetBlankEntries()
 	isNewEntry := true

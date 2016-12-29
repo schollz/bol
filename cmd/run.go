@@ -156,8 +156,6 @@ func Run(workingFile string, changeUser bool, dumpFileName string) {
 func WriteEntry(text string, editor string) string {
 	logger.Debug("Editing file")
 
-	ioutil.WriteFile(path.Join(ssed.PathToTempFolder, "temp"), []byte(text), 0644)
-
 	var cmdArgs []string
 	if editor == "vim" {
 		// Setup vim
@@ -173,6 +171,7 @@ func! WordProcessorModeCLI()
 	setlocal linebreak
 	setlocal noexpandtab
 	normal G$
+	normal zt
 endfu
 com! WPCLI call WordProcessorModeCLI()`
 		// Append to .vimrc file
@@ -203,7 +202,6 @@ com! WPCLI call WordProcessorModeCLI()`
 		}
 
 		cmdArgs = []string{"-u", path.Join(ssed.PathToTempFolder, ".vimrc"), "-c", "WPCLI", "+startinsert", path.Join(ssed.PathToTempFolder, "temp")}
-
 	} else if editor == "nano" {
 		lines := "100" // TODO: DETERMINE THIS
 		cmdArgs = []string{"+" + lines + ",1000000", "-r", "80", "--tempfile", path.Join(ssed.PathToTempFolder, "temp")}
@@ -264,7 +262,11 @@ com! WPCLI call WordProcessorModeCLI()`
 		logger.Debug("Could not find builtin editor: %s", err.Error())
 	}
 
+	// Write the file to load
+	ioutil.WriteFile(path.Join(ssed.PathToTempFolder, "temp"), []byte(text), 0644)
+
 	// Run the editor
+	logger.Debug("Using arguments: %s", strings.Join(cmdArgs, " "))
 	err = errors.New("Editor not run")
 	if tryBuiltin {
 		logger.Debug("Using builtin editor %s", editor+extension)

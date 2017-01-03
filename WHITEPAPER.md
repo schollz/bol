@@ -34,7 +34,7 @@ fs.Init(username,method)
 fmt.Printf("Enter password: ")
 var password string
 fmt.Scanln(&password) // user types in password
-err = fs.Open(password)
+err = fs.Open(password) // does not run until Init(..) is finished
 if err == nil {
   // good password
 } else {

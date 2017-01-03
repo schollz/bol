@@ -16,6 +16,7 @@ $(BINARY): $(SOURCES)
 
 
 .PHONY: delete
+delete:
 	echo "Deleting release ${VERSION}"
 	git tag -d ${VERSION};
 	git push origin :${VERSION};

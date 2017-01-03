@@ -1,0 +1,8 @@
+repo: schollz/bol
+binary_name: bol
+build:
+  oses:
+    - windows
+    - linux
+  arches:
+    - amd64

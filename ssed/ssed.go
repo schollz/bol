@@ -455,14 +455,14 @@ func (ssed *Fs) DeleteDocument(documentName string) {
 // Close closes the repo and pushes if it was succesful pulling
 func (ssed *Fs) Close() {
 	defer timeTrack(time.Now(), "Closing archive")
-	logger.Debug("Archiving")
 	wd, _ := os.Getwd()
 	os.Chdir(path.Join(pathToLocalFolder, ssed.username))
 	filesFullPath, _ := filepath.Glob(path.Join(pathToLocalFolder, ssed.username, "*.json"))
 	fileList := make([]string, len(filesFullPath))
+	logger.Debug("archiving %d files", len(filesFullPath))
 	for i, file := range filesFullPath {
 		fileList[i] = filepath.Base(file)
-		logger.Debug("archiving %s", fileList[i])
+		// logger.Debug("archiving %s", fileList[i])
 	}
 	archiver.TarBz2.Make(ssed.archiveName, fileList)
 	os.Rename(ssed.archiveName, path.Join("..", ssed.archiveName))

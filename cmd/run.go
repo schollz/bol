@@ -269,26 +269,26 @@ com! WPCLI call WordProcessorModeCLI()`
 	logger.Debug("Using arguments: %s", strings.Join(cmdArgs, " "))
 	err = errors.New("Editor not run")
 	if tryBuiltin {
-		logger.Debug("Using builtin editor %s", editor+extension)
+		logger.Debug("Using builtin editor: %s", path.Join(homePath, ".cache", "ssed", "temp", editor+extension))
 		cmd := exec.Command(path.Join(homePath, ".cache", "ssed", "temp", editor+extension), cmdArgs...)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		err = cmd.Run()
 	}
 	if err != nil {
-		logger.Debug("Not using builtin")
+		logger.Debug("Not using builtin: %s", err.Error())
 		// Try to execute from the same folder
-		logger.Debug("Error running: %s", err.Error())
 		programPath, _ := osext.ExecutableFolder()
 		editor = filepath.Base(editor)
+		logger.Debug("Using editor in program path: %s", path.Join(programPath, editor+extension))
 		cmd := exec.Command(path.Join(programPath, editor+extension), cmdArgs...)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		err2 := cmd.Run()
 		if err2 != nil {
-			logger.Debug("Failed using from same folder as executable")
+			logger.Debug("Failed using editor in program path: %s", err.Error())
 			// Try to execute from system path
-			logger.Debug("Error running: %s", err.Error())
+			logger.Debug("Using editor in system path: %s", editor+extension)
 			cmd := exec.Command(editor+extension, cmdArgs...)
 			cmd.Stdin = os.Stdin
 			cmd.Stdout = os.Stdout

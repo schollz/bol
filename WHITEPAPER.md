@@ -1,65 +1,54 @@
-*bol* is powered by `ssed` filesystem (fs).
+*bol* is powered by a library to perform simple synchronization of encrypted documents (`ssed`). This is refered to to as the `ssed` filesystem (fs). The following is the working document for the idea and implementation of the `ssed` fs.
 
 # Guide to `ssed`
 
-`ssed` is simple synchronization of encrypted documents. `ssed` stores documents. A document is composed of entries. A single entry has:
+`ssed` is simple synchronization of encrypted documents. `ssed` stores documents. A document is a list of entries. A single entry has:
 
-- text content, main data of entry
-- created timestamp, when it was first created (used to sort for display)
-- modified timestamp, when it was last modified (used to sort for ignoring)
-- document name which refers to which it belongs to
-- entry name which is a unique identifier of this entry for a given document
+- name of entry, must be unique (text).
+- name of document it belongs to (text)
+- content of the entry (text). Can also be indicator of "ignore document" / "ignore entry" to perform pseudo-deletion.
+- creation time, used to sort for display (timestamp).
+- last modified time, used to sort for ignoring (timestamp).
 
-The fs stores an entry by writing a JSON encoding the entry components to `UUID.json` where `UUID` is a sha256 hash of the text. This entry is encrypted using AES.
+Each entry is stored in a separate file. The fs stores an entry by writing a JSON encoding the entry components to `UUID.json` where `UUID` is a sha256 hash of the entry content. This entry is encrypted using AES and stored as a hex string.
 
-The timestamp is used to provide the ordering.
-The document is used to filter out only the needed entries.
-The text content is either the fulltext of that entry, or an indicator ("ignore document" / "ignore entry") to help with reconstruction.
 
 # Compression / Encryption
 
-The archive is a  tar.bz2 archive of all entries. Upon use, this archive is de-compressed, and then stored in a temp directory. Files are decrypted only when they are read.
+All entries for all documents are stored in an a  tar.bz2 archive. Upon use, this archive is de-compressed, and then stored in a temp directory. Files are decrypted only when they are read.
 
-I'm aware that this makes the archive slightly larger (since it is compressing encrypted text). However, I've found that decompressing >1,000 files takes 1.5+ seconds.
+__Note__: I'm aware that compressing after encryptiong makes the archive slightly larger (since it is compressing encrypted text). However, I've found that decompressing >1,000 files takes 1.5+ seconds.
 Thus, I aim to perform decompression *asynchronously*, while the password is being entered, which means the archive itself cannot be encrypted.
-Actual costs are not exorbitantly. Instead of compressing 1000 short documents from 1MB to ~50k, instead it will compress to ~200k.
+The increased costs are not exorbitant. Instead of compressing 1000 short documents from 1MB to ~50k, instead it will compress to ~200k.
 
 
 # Syncing
 
-The remote *always* has the latest. The local maybe ahead or behind. This means the local must always combine the archives by unzipping them into the same directory and then rezipping them. If the local is ahead or behind, it will simply combine its file in.
+The local fs must *always* pull before it can push, because the local maybe ahead or behind. Pulling is performed by unzipping the remote archive and local archive into the same directory and then rezipping them. If the local is ahead or behind, it will simply combine its file in.
 
-Synchronization occurs in two steps. First the user initializes the filesystem:
+Synchronization occurs in two steps. First the user initializes the filesystem. Then the password is supplied.
 
 ```golang
 var fs ssed
 fs.Init(username,method)
-```
-
-This will download the latest repo, and unzip both of them and merge there contents *asynchronously*. These steps are also decoupled from requiring any passwords, so they will not need to wait for a password to be entered. In the meantime, the password can be requested
-
-```golang
-for {
-  password = AskUser() // 1 - 3 seconds
-  err := fs.Open(password)
-  if err == nil {
-    break
-  } else {
-    fmt.Println("Incorrect password")
-  }
+fmt.Printf("Enter password: ")
+var password string
+fmt.Scanln(&password) // user types in password
+err = fs.Open(password)
+if err == nil {
+  // good password
+} else {
+  // incorrect password
 }
 ```
 
-During this stage, the password is requested, while the initialization is happening. Then the repository can be opened, given the right password, however `Open(..)` will not start until the initialization is done.
+The `Init(..)` function will download the latest repo for `username`, and merge local+remote contents *asynchronously*. These steps are also decoupled from requiring any passwords, so they will not need to wait for a password to be entered. In the meantime, the password can be requested and supplied.
 
-The method `Open(..)` checks the password by trying to decrypt an entry, and if it fails it returns an error.
+The method `Open(..)` checks the password by trying to decrypt an entry, and if it fails it returns an error. The function, `Open(..)` will not start until the initialization is done, but the initialization will run while the user spends time typing in a password.
 
 ## Methods
+
 There are two possible methods for syncing.
-
-Each method proceeds by first downloading an archive of all the entries and unzipping it into a working directory. Then it unzips the current archvie intot he working directory, and then re-archives all those files as the current archive. *This way the local copies can never be overwritten*
-
-If the download was successful, then, after writing, it is uploaded back to the remote. *It only uploads if download was successful*, because otherwise the archive can contain things out of sync.
 
 ## Method 1 - Server (~500 ms upload/download)
 
@@ -82,9 +71,9 @@ The user needs to provide:
 
 Adding/viewing entries can be done using the command line program.
 
-Adding entries should also done using the server, using [trix](https://trix-editor.org/) or [quill](http://codepen.io/anon/pen/JbWvyY?editors=1111) and then a form for document name, user name, and password
+Adding entries should also done using the server. Viewing entries can *not* be done using the server to avoid having to have a front-end and front-end security.
 
-# Purposeful neglectfulness
+## Other purposeful neglectfulness
 
 - Diffs will not be stored. I'd like to optionally add an entry at any point in time without rebuilding (rebasing) history.
 - Files can not be deleted. It makes synchronization easier and also the disk cost of words is VERY small so its fine to store tons of text files (~1000's)
@@ -129,5 +118,28 @@ Only `pathToTemp` contains unencrypted things, so all files in that folder shoul
 
 # Exporting
 
-Exports each as an individual file with text of the entry. The filename has the rest of the meta data:
-`documentName-date-wntryName.tzt`
+Exporting releases a JSON file that is simply a list of documents (which are lists of entries associated with each document).
+
+```javascript
+[  
+  {  
+    "Name":"document1",
+    "Entries":[  
+      {  
+        "text":"some text",
+        "timestamp":"2014-11-20 13:00:00",
+        "modified_timestamp":"2014-11-20 13:00:00",
+        "document":"document1",
+        "entry":"JwZGmuuykV"
+      },
+      {  
+        "text":"some text4",
+        "timestamp":"2013-11-20 13:00:00",
+        "modified_timestamp":"2013-11-20 13:00:00",
+        "document":"document1",
+        "entry":"entry2"
+      }
+    ]
+  }
+]
+```

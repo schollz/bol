@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/schollz/bol/ssed"
 	"io"
 	"io/ioutil"
 	"log"
@@ -15,8 +14,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/schollz/bol/ssed"
+
 	"github.com/schollz/bol/utils"
 	"github.com/schollz/cryptopasta"
+	"github.com/schollz/quotation-explorer/getquote"
 )
 
 // https://gist.github.com/tristanwietsma/8444cf3cb5a1ac496203
@@ -247,7 +249,7 @@ func HandlePush(w http.ResponseWriter, r *http.Request) {
 		defer outFile.Close()
 		_, err = io.Copy(outFile, r.Body)
 		log.Printf("PUSH: Wrote file '%s' for '%s'\n", fileName, username)
-		io.WriteString(w, "thanks\n")
+		io.WriteString(w, getquote.GetQuote()+"\n")
 	} else {
 		log.Println("Incorect password, " + password)
 		w.WriteHeader(http.StatusUnauthorized)

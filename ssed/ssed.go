@@ -813,7 +813,7 @@ func (ssed *Fs) DumpAll() {
 	}
 	bJson, _ := json.MarshalIndent(documentList, "", " ")
 	utils.EncryptToFile(bJson, ssed.password, filename)
-	fmt.Println("Contents written to %s\nRead using boltool --decrypt %s", filename)
+	fmt.Printf("\nContents written to %s\nRead using boltool --decrypt %s\n\n", filename, filename)
 }
 
 // timeTrack from https://coderwall.com/p/cp5fya/measuring-execution-time-in-go

@@ -6,3 +6,24 @@
 
 *bol* uses `ssed` as a backend for the encrypted storage and synchronization. For more information, [see the white paper](https://github.com/schollz/bol/blob/master/WHITEPAPER.md).
 
+## Install
+
+```
+go get -u -v github.com/schollz/bol/...
+```
+
+## Run
+
+```
+bol
+```
+
+To delete entry, just delete the entire entry and replace with ```ignore entry```.
+
+To delete a document, just make a new entry that says ```ignore document```.
+
+The files `bol` creates can be inspected with the `boltool`,
+
+```
+boltool -decrypt e53a4a99301c71e6039cb80d52db09a6083bb0913df83fe2343db36d9edf4aae.json
+```

@@ -12,18 +12,49 @@
 go get -u -v github.com/schollz/bol/...
 ```
 
-## Run
+## Usage
+
+Just run
 
 ```
 bol
 ```
 
+### Delete entry
+
 To delete entry, just delete the entire entry and replace with ```ignore entry```.
+
+### Delete document
 
 To delete a document, just make a new entry that says ```ignore document```.
 
-The files `bol` creates can be inspected with the `boltool`,
+### Edit specific entry/document
 
 ```
-boltool -decrypt e53a4a99301c71e6039cb80d52db09a6083bb0913df83fe2343db36d9edf4aae.json
+bol document_name
+bol entry_name
+```
+
+### Backup everything
+
+```
+bol --dump
+```
+
+The dump file `user-20ZZ-YY-XX.bol` can be read using the boltool,
+
+```
+boltool -decrypt user-20ZZ-YY-XX.bol
+```
+
+### Erase all local copies
+
+```
+bol --clean
+```
+
+### Change user
+
+```
+bol --config
 ```

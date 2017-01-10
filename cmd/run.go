@@ -45,7 +45,7 @@ func init() {
 	}
 }
 
-func Run(workingFile string, changeUser bool, dumpFileName string) {
+func Run(workingFile string, changeUser bool, dumpFile bool) {
 	var fs ssed.Fs
 	var err error
 	err = fs.Init("", "")
@@ -79,9 +79,8 @@ func Run(workingFile string, changeUser bool, dumpFileName string) {
 	}
 	defer fs.Close()
 
-	if dumpFileName != "" {
-		fs.DumpAll(dumpFileName)
-		fmt.Printf("Dumped to %s\n", dumpFileName)
+	if dumpFile {
+		fs.DumpAll()
 		return
 	}
 

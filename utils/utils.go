@@ -42,11 +42,11 @@ func DecryptFromFile(password string, filename string) ([]byte, error) {
 	key := sha256.Sum256([]byte(password))
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
-		panic(err)
+		return []byte{}, err
 	}
 	contentData, err := hex.DecodeString(string(content))
 	if err != nil {
-		panic(err)
+		return []byte{}, err
 	}
 	return cryptopasta.Decrypt(contentData, &key)
 }

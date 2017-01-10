@@ -1,8 +1,6 @@
 package ssed
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,7 +20,6 @@ import (
 	"github.com/mholt/archiver"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/schollz/bol/utils"
-	"github.com/schollz/cryptopasta"
 )
 
 // Generic functions
@@ -362,16 +359,16 @@ func (ssed *Fs) copyOverFiles() {
 
 }
 
-func openAndDecrypt(filename string, password string) (string, error) {
-	key := sha256.Sum256([]byte(password))
-	content, err := ioutil.ReadFile(filename)
-	contentData, err := hex.DecodeString(string(content))
-	if err != nil {
-		return "", err
-	}
-	decrypted, err := cryptopasta.Decrypt(contentData, &key)
-	return string(decrypted), err
-}
+// func openAndDecrypt(filename string, password string) (string, error) {
+// 	key := sha256.Sum256([]byte(password))
+// 	content, err := ioutil.ReadFile(filename)
+// 	contentData, err := hex.DecodeString(string(content))
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	decrypted, err := cryptopasta.Decrypt(contentData, &key)
+// 	return string(decrypted), err
+// }
 
 func (ssed *Fs) Open(password string) error {
 	fmt.Print("\nSyncing...")
@@ -384,7 +381,7 @@ func (ssed *Fs) Open(password string) error {
 	files, _ := filepath.Glob(path.Join(pathToLocalFolder, ssed.username, "*"))
 	for _, file := range files {
 		logger.Debug("Testing against %s", file)
-		_, err := openAndDecrypt(file, password)
+		_, err := utils.DecryptFromFile(password, file)
 		if err != nil {
 			return err
 		} else {
@@ -770,16 +767,7 @@ func (ssed *Fs) DumpAll(filename string) {
 	var entriesToSortByModified = make(map[string]entry)
 	for _, file := range files {
 		logger.Debug("Parsing %s", file)
-		key := sha256.Sum256([]byte(ssed.password))
-		content, err := ioutil.ReadFile(file)
-		if err != nil {
-			panic(err)
-		}
-		contentData, err := hex.DecodeString(string(content))
-		if err != nil {
-			panic(err)
-		}
-		decrypted, err := cryptopasta.Decrypt(contentData, &key)
+		decrypted, err := utils.DecryptFromFile(ssed.password, file)
 		if err != nil {
 			panic(err)
 		}

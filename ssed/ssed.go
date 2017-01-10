@@ -430,11 +430,13 @@ func (ssed *Fs) Update(text, documentName, entryName, timestamp string) error {
 	// encrypted, _ := cryptopasta.Encrypt(b, &key)
 	//
 	// err = ioutil.WriteFile(fileName, []byte(hex.EncodeToString(encrypted)), 0755)
-	err = utils.EncryptToFile(b, fileName, ssed.password)
+	err = utils.EncryptToFile(b, ssed.password, fileName)
 
 	ssed.parsed = false
 	if err == nil {
-		logger.Debug("Inserted new entry, %s", e.Entry)
+		logger.Debug("Inserted new entry, %s as %s", e.Entry, fileName)
+	} else {
+		logger.Error("Could not insert entry, %s because error: %s", e.Entry, err.Error())
 	}
 	return err
 }

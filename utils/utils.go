@@ -32,8 +32,12 @@ func GetPassword() string {
 }
 
 func EncryptToFile(toEncrypt []byte, password string, filename string) error {
+	fmt.Println(filename)
 	key := sha256.Sum256([]byte(password))
-	encrypted, _ := cryptopasta.Encrypt(toEncrypt, &key)
+	encrypted, err := cryptopasta.Encrypt(toEncrypt, &key)
+	if err != nil {
+		return err
+	}
 
 	return ioutil.WriteFile(filename, []byte(hex.EncodeToString(encrypted)), 0755)
 }

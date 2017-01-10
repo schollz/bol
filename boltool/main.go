@@ -42,7 +42,7 @@ func main() {
 			fmt.Printf("%s does not exist", fileName)
 		}
 	} else {
-		fmt.Println("This tool is compatible with the bol style encryption/decryption.")
-		fmt.Println("./tool --decrypt FILE\n./tool --encrypt FILE")
+		fmt.Println("The boltool is compatible with the bol style encryption/decryption.")
+		fmt.Println("boltool --decrypt FILE\nboltool --encrypt FILE")
 	}
 }

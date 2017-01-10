@@ -13,8 +13,6 @@ import (
 	"strconv"
 	"strings"
 
-	"golang.org/x/crypto/ssh/terminal"
-
 	"github.com/jcelliott/lumber"
 	"github.com/kardianos/osext"
 	homedir "github.com/mitchellh/go-homedir"
@@ -71,14 +69,7 @@ func Run(workingFile string, changeUser bool, dumpFileName string) {
 		fmt.Println(fs.ReturnUser(), fs.ReturnMethod())
 	}
 	for {
-		fmt.Printf("Enter password: ")
-		var password string
-		if runtime.GOOS == "windows" {
-			fmt.Scanln(&password) // not great fix, but works for cygwin
-		} else {
-			bytePassword, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
-			password = strings.TrimSpace(string(bytePassword))
-		}
+		password := utils.GetPassword()
 		err = fs.Open(password)
 		if err == nil {
 			break

@@ -429,10 +429,12 @@ func (ssed *Fs) Update(text, documentName, entryName, timestamp string) error {
 		return err
 	}
 
-	key := sha256.Sum256([]byte(ssed.password))
-	encrypted, _ := cryptopasta.Encrypt(b, &key)
+	// key := sha256.Sum256([]byte(ssed.password))
+	// encrypted, _ := cryptopasta.Encrypt(b, &key)
+	//
+	// err = ioutil.WriteFile(fileName, []byte(hex.EncodeToString(encrypted)), 0755)
+	err = utils.EncryptToFile(b, fileName, ssed.password)
 
-	err = ioutil.WriteFile(fileName, []byte(hex.EncodeToString(encrypted)), 0755)
 	ssed.parsed = false
 	if err == nil {
 		logger.Debug("Inserted new entry, %s", e.Entry)
@@ -570,19 +572,20 @@ func (ssed *Fs) parseArchive() {
 	var entriesToSortByModified = make(map[string]entry)
 	for _, file := range files {
 		logger.Debug("Parsing %s", file)
-		key := sha256.Sum256([]byte(ssed.password))
-		content, err := ioutil.ReadFile(file)
+		// key := sha256.Sum256([]byte(ssed.password))
+		// content, err := ioutil.ReadFile(file)
+		// if err != nil {
+		// 	panic(err)
+		// }
+		// contentData, err := hex.DecodeString(string(content))
+		// if err != nil {
+		// 	panic(err)
+		// }
+		decrypted, err := utils.DecryptFromFile(ssed.password, file)
 		if err != nil {
 			panic(err)
 		}
-		contentData, err := hex.DecodeString(string(content))
-		if err != nil {
-			panic(err)
-		}
-		decrypted, err := cryptopasta.Decrypt(contentData, &key)
-		if err != nil {
-			panic(err)
-		}
+
 		var e entry
 		err = json.Unmarshal(decrypted, &e)
 		if err != nil {

@@ -7,11 +7,49 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"os"
+	"runtime"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/ssh/terminal"
+
+	"github.com/schollz/cryptopasta"
 )
+
+func GetPassword() string {
+	fmt.Printf("Enter password: ")
+	var password string
+	if runtime.GOOS == "windows" {
+		fmt.Scanln(&password) // not great fix, but works for cygwin
+	} else {
+		bytePassword, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
+		password = strings.TrimSpace(string(bytePassword))
+	}
+	return password
+}
+
+func EncryptToFile(toEncrypt []byte, password string, filename string) error {
+	key := sha256.Sum256([]byte(password))
+	encrypted, _ := cryptopasta.Encrypt(toEncrypt, &key)
+
+	return ioutil.WriteFile(filename, []byte(hex.EncodeToString(encrypted)), 0755)
+}
+
+func DecryptFromFile(password string, filename string) ([]byte, error) {
+	key := sha256.Sum256([]byte(password))
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		panic(err)
+	}
+	contentData, err := hex.DecodeString(string(content))
+	if err != nil {
+		panic(err)
+	}
+	return cryptopasta.Decrypt(contentData, &key)
+}
 
 func HashAndHex(s string) string {
 	b := sha256.Sum256([]byte(s))

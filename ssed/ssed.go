@@ -136,11 +136,7 @@ func EraseAll() {
 
 // CleanUp shreds all the temporary files
 func CleanUp() {
-	files, _ := filepath.Glob(path.Join(PathToTempFolder, "*"))
-	for _, file := range files {
-		logger.Debug("Shredding %s", file)
-		utils.Shred(file)
-	}
+	utils.Shred(path.Join(PathToTempFolder, "temp"))
 }
 
 func ListConfigs() []config {
@@ -490,7 +486,7 @@ func (ssed *Fs) Close() {
 	// 		}
 	// 	}
 	// }
-	os.RemoveAll(PathToTempFolder)
+	os.Remove(path.Join(PathToTempFolder, "temp"))
 }
 
 func (ssed *Fs) delete() error {

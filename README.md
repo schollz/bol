@@ -4,7 +4,7 @@
 
 *bol* is [a command-line program](https://github.com/schollz/bol/releases) that lets you write/view encrypted documents and [a webpage](https://bol.schollz.com/) that lets you write (not view) documents.
 
-*bol* uses `ssed` as a backend for the encrypted storage and synchronization. For more information, [see the white paper](https://github.com/schollz/bol/blob/master/WHITEPAPER.md).
+*bol* uses `ssed` as a backend for the encrypted storage and synchronization. For more information, [see the white paper](https://github.com/schollz/bol/blob/master/ssed/README.md).
 
 ## Install
 

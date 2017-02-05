@@ -220,7 +220,7 @@ func HandlePush(w http.ResponseWriter, r *http.Request) {
 	} else {
 		log.Printf("PUSH: User '%s' does not exist", username)
 		w.WriteHeader(http.StatusNetworkAuthenticationRequired)
-		io.WriteString(w, username+" does not exist")
+		io.WriteString(w, username+" does not exist, goto https://bol.schollz.com to register user")
 		return
 	}
 

@@ -53,8 +53,9 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 		var username, method string
 		fmt.Print("Enter username: ")
 		fmt.Scanln(&username)
-		fmt.Print("Enter method (blank for bol): ")
-		fmt.Scanln(&method)
+		// Skip until other methods are availalbe
+		// fmt.Print("Enter method (blank for bol): ")
+		// fmt.Scanln(&method)
 		if len(method) == 0 {
 			method = "https://bol.schollz.com"
 		}

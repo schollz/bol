@@ -758,7 +758,7 @@ func (ssed *Fs) GetEntry(documentName, entryName string) (entry, error) {
 // 	ioutil.WriteFile(filename, bJson, 0644)
 // }
 
-func (ssed *Fs) DumpAll() {
+func (ssed *Fs) DumpAll() (string, error) {
 	filename := ssed.username + "-" + time.Now().Format("2006-01-02") + ".bol"
 	files, _ := filepath.Glob(path.Join(ssed.pathToLocalRepo, "*"))
 
@@ -810,6 +810,7 @@ func (ssed *Fs) DumpAll() {
 	bJson, _ := json.MarshalIndent(documentList, "", " ")
 	utils.EncryptToFile(bJson, ssed.password, filename)
 	fmt.Printf("\nContents written to %s\nRead using boltool --decrypt %s\n\n", filename, filename)
+	return filename, nil
 }
 
 // timeTrack from https://coderwall.com/p/cp5fya/measuring-execution-time-in-go

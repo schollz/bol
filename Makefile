@@ -2,7 +2,7 @@ SOURCEDIR=.
 
 BINARY=bol
 USER=schollz
-VERSION=0.1.0
+VERSION=0.1.1
 BUILD_TIME=`date +%FT%T%z`
 BUILD=`git rev-parse HEAD`
 BUILDSHORT = `git rev-parse --short HEAD`
@@ -49,3 +49,27 @@ release:
 				--tag ${VERSION} \
 				--name "${BINARY}-${VERSION}-win64.zip" \
 				--file ${BINARY}-${VERSION}-win64.zip
+	echo "Making Linux-AMD64"
+	env GOOS=linux GOARCH=amd64 \
+		go build -ldflags \
+		"-X main.OS=linux -X main.Version=${VERSION} -X main.Build=${BUILD} -X main.BuildTime=${BUILD_TIME}" \
+		-o ${BINARY}
+	zip -j ${BINARY}-${VERSION}-linux64.zip ${BINARY} README.md LICENSE
+	github-release upload \
+				--user ${USER} \
+				--repo ${BINARY} \
+				--tag ${VERSION} \
+				--name "${BINARY}-${VERSION}-linux64.zip" \
+				--file ${BINARY}-${VERSION}-linux64.zip
+	echo "Making OSX-AMD64"
+	env GOOS=darwin GOARCH=amd64 \
+		go build -ldflags \
+		"-X main.OS=osx -X main.Version=${VERSION} -X main.Build=${BUILD} -X main.BuildTime=${BUILD_TIME}" \
+		-o ${BINARY}
+	zip -j ${BINARY}-${VERSION}-osx.zip ${BINARY} README.md LICENSE
+	github-release upload \
+				--user ${USER} \
+				--repo ${BINARY} \
+				--tag ${VERSION} \
+				--name "${BINARY}-${VERSION}-osx.zip" \
+				--file ${BINARY}-${VERSION}-osx.zip

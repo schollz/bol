@@ -206,7 +206,6 @@ func HandlePush(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	log.Println("Pushed new repo")
 	username, password, _ := r.BasicAuth()
-	log.Println(r.BasicAuth())
 	creds := make(map[string]string)
 	data, _ := ioutil.ReadFile(path.Join(wd, "logins.json"))
 	json.Unmarshal(data, &creds)
@@ -251,7 +250,7 @@ func HandlePush(w http.ResponseWriter, r *http.Request) {
 		log.Printf("PUSH: Wrote file '%s' for '%s'\n", fileName, username)
 		io.WriteString(w, getquote.GetQuote()+"\n")
 	} else {
-		log.Println("Incorect password, " + password)
+		log.Println("Incorect password for" + username)
 		w.WriteHeader(http.StatusUnauthorized)
 		io.WriteString(w, "incorrect password")
 	}
@@ -262,7 +261,6 @@ func HandleDelete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	log.Println("Erasing repo")
 	username, password, _ := r.BasicAuth()
-	log.Println(r.BasicAuth())
 	creds := make(map[string]string)
 	data, _ := ioutil.ReadFile(path.Join(wd, "logins.json"))
 	json.Unmarshal(data, &creds)

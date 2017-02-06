@@ -110,6 +110,9 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 		} else {
 			workingFile = document
 		}
+		if len(workingFile) == 0 {
+			workingFile = "notes"
+		}
 		fmt.Printf("Opening %s\n", workingFile)
 		entries = fs.GetDocument(workingFile)
 	} else {

@@ -513,6 +513,7 @@ func (ssed *Fs) delete() error {
 }
 
 func (ssed *Fs) upload() error {
+	defer timeTrack(time.Now(), "Uploading archive")
 	wd, _ := os.Getwd()
 
 	if strings.Contains(ssed.method, "http") {

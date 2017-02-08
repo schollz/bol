@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -268,4 +269,8 @@ func FormatDate(date time.Time) string {
 func ReFormatDate(date string) string {
 	parsedDate, _ := ParseDate(date)
 	return FormatDate(parsedDate)
+}
+
+func GetUnixTimestamp() string {
+	return strconv.Itoa(int(time.Now().UnixNano() / 1000000))
 }

@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -9,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -30,7 +33,14 @@ var apikeys = struct {
 	m map[string]string
 }{m: make(map[string]string)}
 
+var MaxArchiveBytes int
+var Port, Host string
+
 func main() {
+	flag.IntVar(&MaxArchiveBytes, "limit", 10000000, "limit the max size of archive with backups (default 10 MB)")
+	flag.StringVar(&Port, "port", "9095", "set port (default 9095)")
+	flag.StringVar(&Host, "host", "https://bol.schollz.com", "set hostname (default https://bol.schollz.com)")
+	flag.Parse()
 	wd, _ = os.Getwd()
 	http.HandleFunc("/", HandleLogin)
 	http.HandleFunc("/login", HandleLoginAttempt)
@@ -40,8 +50,9 @@ func main() {
 		http.ServeFile(w, r, r.URL.Path[1:])
 	})
 	http.HandleFunc("/repo", HandleRepo) // POST latest repo
-	fmt.Println("Running on 0.0.0.0:9095")
-	log.Fatal(http.ListenAndServe(":9095", nil))
+	fmt.Printf("Running on 0.0.0.0:%s, aliased as %s\n", Port, Host)
+	fmt.Printf("Saving up to %d MB for archives\n", MaxArchiveBytes/1000000)
+	log.Fatal(http.ListenAndServe(":"+Port, nil))
 }
 
 func HandleLogin(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +106,7 @@ func deleteApikeyDelay(apikey string) {
 
 func updateRepo(username, password, text, document, entry, date string) {
 	var fs ssed.Fs
-	fs.Init(username, "http://127.0.0.1:9095")
+	fs.Init(username, "http://127.0.0.1:"+Port)
 	fs.Open(password)
 	fs.Update(text, document, entry, date)
 	fs.Close()
@@ -185,7 +196,7 @@ func HandleLoginAttempt(w http.ResponseWriter, r *http.Request) {
 		apikeys.Unlock()
 		pageS = strings.Replace(pageS, "keyXX", apikey, -1)
 		var fs ssed.Fs
-		fs.Init(username, "http://127.0.0.1:9095")
+		fs.Init(username, "http://127.0.0.1:"+Port)
 		fs.Open(password)
 		documentList := fs.ListDocuments()
 		if len(documentList) == 0 {
@@ -204,8 +215,8 @@ func HandleLoginAttempt(w http.ResponseWriter, r *http.Request) {
 
 func HandlePush(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	log.Println("Pushed new repo")
 	username, password, _ := r.BasicAuth()
+	log.Printf("Got repo request for %s\n", username)
 	creds := make(map[string]string)
 	data, _ := ioutil.ReadFile(path.Join(wd, "logins.json"))
 	json.Unmarshal(data, &creds)
@@ -215,30 +226,19 @@ func HandlePush(w http.ResponseWriter, r *http.Request) {
 	if passwordHash, ok := creds[username]; ok {
 		if cryptopasta.CheckPasswordHash([]byte(passwordHash), []byte(password)) == nil {
 			authenticated = true
+			log.Printf("Authentication success for %s\n", username)
 		}
 	} else {
-		log.Printf("PUSH: User '%s' does not exist", username)
+		log.Printf("PUSH: User '%s' does not exist\n", username)
 		w.WriteHeader(http.StatusNetworkAuthenticationRequired)
-		io.WriteString(w, username+" does not exist, goto https://bol.schollz.com to register user")
+		io.WriteString(w, username+" does not exist, goto "+Host+" to register user")
 		return
 	}
 
 	if authenticated {
-		fileName := path.Join(wd, username+".tar.bz2")
+		initializeUser(username)
+		fileName := path.Join(wd, "archive", username, username+"."+utils.GetUnixTimestamp()+".tar.bz2")
 
-		// backup the previous
-		if utils.Exists(fileName) {
-			for i := 1; i < 1000000; i++ {
-				newFileName := fileName + "." + strconv.Itoa(i)
-				if utils.Exists(newFileName) {
-					continue
-				}
-				utils.CopyFile(fileName, newFileName)
-				break
-			}
-		}
-
-		os.Remove(fileName)
 		outFile, err := os.Create(fileName)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -247,6 +247,7 @@ func HandlePush(w http.ResponseWriter, r *http.Request) {
 		// handle err
 		defer outFile.Close()
 		_, err = io.Copy(outFile, r.Body)
+		go cleanFiles(username)
 		log.Printf("PUSH: Wrote file '%s' for '%s'\n", fileName, username)
 		io.WriteString(w, getquote.GetQuote()+"\n")
 	} else {
@@ -288,10 +289,10 @@ func HandlePull(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	username, _, _ := r.BasicAuth()
 	log.Println("Got repo request from " + username)
-	fileName := username + ".tar.bz2"
-	if utils.Exists(fileName) {
+	latestFileName, err := getLatestFileName(username)
+	if err == nil {
 		w.Header().Set("Content-Type", "octet-stream")
-		file, _ := os.Open(fileName)
+		file, _ := os.Open(path.Join(wd, "archive", username, latestFileName))
 		io.Copy(w, file)
 	} else {
 		w.WriteHeader(http.StatusNoContent)
@@ -369,5 +370,76 @@ func DeleteOnly(h handler) handler {
 			return
 		}
 		http.Error(w, "delete only", http.StatusMethodNotAllowed)
+	}
+}
+
+func initializeUser(username string) {
+	pathToData := path.Join(wd, "archive", username)
+	log.Println(pathToData)
+	if !utils.Exists(path.Join(wd, "archive")) {
+		os.Mkdir(path.Join(wd, "archive"), 0755)
+	}
+	if !utils.Exists(path.Join(wd, "archive", username)) {
+		os.Mkdir(path.Join(wd, "archive", username), 0755)
+	}
+}
+
+func getLatestFileName(username string) (string, error) {
+	files, _ := ioutil.ReadDir(path.Join(wd, "archive", username))
+	if len(files) == 0 {
+		return "", errors.New("No files yet")
+	}
+	timestamps := make([]int, len(files))
+	for i, f := range files {
+		s := strings.Split(f.Name(), ".")
+		timestamp, err := strconv.Atoi(s[1])
+		if err == nil {
+			timestamps[i] = timestamp
+		}
+	}
+	sort.Ints(timestamps)
+	return fmt.Sprintf("%s.%s.tar.bz2", username, strconv.Itoa(timestamps[len(timestamps)-1])), nil
+}
+
+func cleanFiles(username string) {
+	files, _ := ioutil.ReadDir(path.Join(wd, "archive", username))
+	if len(files) == 0 {
+		return
+	}
+
+	timestamps := make([]int, len(files))
+	for i, f := range files {
+		s := strings.Split(f.Name(), ".")
+		timestamp, err := strconv.Atoi(s[1])
+		if err == nil {
+			timestamps[i] = timestamp
+		}
+	}
+
+	filenames := make([]string, len(timestamps))
+	for i, timestamp := range timestamps {
+		filenames[i] = path.Join(wd, "archive", username, fmt.Sprintf("%s.%s.tar.bz2", username, strconv.Itoa(timestamp)))
+	}
+
+	removeI := 0
+	for {
+		totalSize := int64(0)
+		for _, filename := range filenames {
+			fi, e := os.Stat(filename)
+			if e != nil {
+				continue
+			}
+			// get the size
+			totalSize += fi.Size()
+		}
+		log.Printf("Total size of %s archive is %d", username, totalSize)
+
+		if totalSize > int64(MaxArchiveBytes) && len(filenames)-removeI > 1 {
+			log.Printf("Removing file %s", filenames[removeI])
+			os.Remove(filenames[removeI])
+			removeI++
+		} else {
+			break
+		}
 	}
 }

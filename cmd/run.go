@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -74,6 +75,8 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 		password := utils.GetPassword()
 		err = fs.Open(password)
 		if err == nil {
+			// Check user status
+			checkUserStatus(fs.ReturnUser(), password, fs.ReturnMethod())
 			break
 		} else {
 			fmt.Println("Incorrect password.")
@@ -296,4 +299,28 @@ com! WPCLI call WordProcessorModeCLI()`
 	}
 	fileContents, _ := ioutil.ReadFile(path.Join(ssed.PathToTempFolder, "temp"))
 	return strings.TrimSpace(string(fileContents))
+}
+
+func checkUserStatus(username string, password string, method string) {
+	req, err := http.NewRequest("PUT", method+"/repo", nil)
+	if err != nil {
+		logger.Debug("Failed with request")
+		return
+	}
+	req.SetBasicAuth(username, password)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		// handle err
+	}
+	defer resp.Body.Close()
+	htmlData, err := ioutil.ReadAll(resp.Body) //<--- here!
+	if err != nil {
+		logger.Debug("Error reading body")
+	}
+
+	if strings.Contains(string(htmlData), "inserted") {
+		fmt.Printf("'%s' user created on server %s\n", username, method)
+	}
 }

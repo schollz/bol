@@ -47,7 +47,12 @@ func main() {
 	http.HandleFunc("/register", HandleRegisterAttempt)
 	http.HandleFunc("/post", HandlePostAttempt)
 	http.HandleFunc("/static/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, r.URL.Path[1:])
+		data, err := Asset(r.URL.Path[1:])
+		if err != nil {
+			log.Println("Error finding asset")
+		}
+		w.Write(data)
+		// http.ServeFile(w, r, r.URL.Path[1:])
 	})
 	http.HandleFunc("/repo", HandleRepo) // POST latest repo
 	fmt.Printf("Running on 0.0.0.0:%s, aliased as %s\n", Port, Host)
@@ -119,7 +124,10 @@ func ShowLoginPage(w http.ResponseWriter, r *http.Request, message string, messa
 	if len(message) == 0 {
 		messageHTML = ""
 	}
-	page, _ := ioutil.ReadFile("login.html")
+	page, err := Asset("login.html")
+	if err != nil {
+		log.Println("Error finding asset")
+	}
 	pageS := string(page)
 	pageS = strings.Replace(pageS, "MESSAGE", messageHTML, -1)
 	fmt.Fprintf(w, "%s", pageS)
@@ -188,7 +196,10 @@ func HandleLoginAttempt(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if authenticated {
-		page, _ := ioutil.ReadFile("post.html")
+		page, err := Asset("post.html")
+		if err != nil {
+			log.Println("Error finding asset")
+		}
 		pageS := string(page)
 		apikey := utils.RandStringBytesMaskImprSrc(30)
 		apikeys.Lock()

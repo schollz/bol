@@ -10,21 +10,20 @@
 - creation time, used to sort for display (timestamp).
 - last modified time, used to sort for ignoring (timestamp).
 
-Each entry is stored in a separate file. The fs stores an entry by writing a JSON encoding the entry components to `UUID.json` where `UUID` is a sha256 hash of the entry content. This entry is encrypted using AES and stored as a hex string.
+Each entry is stored in a separate file. The fs stores an entry by writing a JSON encoding the entry components to `UUID.json` where `UUID` is a sha256 hash of the entry content. This entry is encrypted using 256-bit AES-GCM and stored as a hex string.
 
 
 # Compression / Encryption
 
 All entries for all documents are stored in an a  tar.bz2 archive. Upon use, this archive is de-compressed, and then stored in a temp directory. Files are decrypted only when they are read.
 
-__Note__: I'm aware that compressing after encryptiong makes the archive slightly larger (since it is compressing encrypted text). However, I've found that decompressing >1,000 files takes 1.5+ seconds.
-Thus, I aim to perform decompression *asynchronously*, while the password is being entered, which means the archive itself cannot be encrypted.
-The increased costs are not exorbitant. Instead of compressing 1000 short documents from 1MB to ~50k, instead it will compress to ~200k.
+__Note__: I'm aware that compression after encryption makes the archive slightly larger then encryption after compression. The increased costs are not exorbitant. Instead of compressing ~1,000 entries from 1MB to ~50k, instead it will compress to ~200k. The reason that I made this choice is the following: decompressing ~1,000 entries takes 2+ seconds on a typical laptop. If a password is not required for opening the archive, then the decompression can be performed asynchronously, while the password is being entered. Thus, program startup becomes an almost imperceptible <200 ms instead of a tiresome 2+ seconds. Decryption is much faster, and can be performed on the documents once the password is entered.
+
 
 
 # Syncing
 
-The local fs must *always* pull before it can push, because the local maybe ahead or behind. Pulling is performed by unzipping the remote archive and local archive into the same directory and then rezipping them. If the local is ahead or behind, it will simply combine its file in.
+The local fs must *always* pull before it can push, because the local maybe ahead or behind. If the local fs is unable to pull, then it will avoid pushing during that session. Pulling is performed by unzipping the remote archive and local archive into the same directory and then rezipping them. If the local is ahead or behind, it will simply combine its file in.
 
 Synchronization occurs in two steps. First the user initializes the filesystem. Then the password is supplied.
 
@@ -54,11 +53,11 @@ There are two possible methods for syncing.
 
 Syncing is provided using a server and client. The server has two routes which the client can use:
 
-- `GET /get` - getting the latest archive, *not* protected, since it is encrypted
-- `POST /post` - pushing changes to an archive, protected by basic auth (username + password is sent)
-- `PUT /user` - add a user (username + hashed password is sent)
+- `GET /repo` - getting the latest archive, *not* protected, since it is encrypted
+- `POST /repo` - pushing changes to an archive, requires basic authorization
+- `PUT /repo` - add a user, requires basic authorization for credentials
 
-## Method 2 - SSH remote computer (~1500 ms upload/download)
+## Method 2 - SSH remote computer (~1500 ms upload/download) - not yet implemented
 
 SSH is provided by the sftp library which can upload and download.
 
@@ -71,12 +70,12 @@ The user needs to provide:
 
 Adding/viewing entries can be done using the command line program.
 
-Adding entries should also done using the server. Viewing entries can *not* be done using the server to avoid having to have a front-end and front-end security.
+Adding entries should also done using the server. Viewing entries can *not* be done using the server to avoid having to have front-end security.
 
 ## Other purposeful neglectfulness
 
 - Diffs will not be stored. I'd like to optionally add an entry at any point in time without rebuilding (rebasing) history.
-- Files can not be deleted. It makes synchronization easier and also the disk cost of words is VERY small so its fine to store tons of text files (~1000's)
+- Files can not be deleted. It makes synchronization easier and also the disk cost of words is VERY small so its fine to store tons of text files (~1000's). If you plan on having 100,000+ entries, then this is not the tool for you.
 
 
 # Configuration

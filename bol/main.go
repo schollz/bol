@@ -40,15 +40,13 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "bol"
 	app.Version = Version + " " + Build + " " + BuildTime + " " + OS
-	app.Usage = `bol is for distributed editing of encrypted stuff
+	app.Usage = `bol is for synchronized editing of encrypted stuff
 
 	 https://github.com/schollz/bol
 
 EXAMPLE USAGE:
    bol new.txt # create new / edit a document, 'new.txt'
-   bol Entry123 # edit a entry, 'Entry123'
-   bol --summary # list a summary of all entries
-   bol --search "dogs cats" # find entries that mention 'dogs' or 'cats'`
+   bol Entry123 # edit a entry, 'Entry123'`
 
 	app.Action = func(c *cli.Context) error {
 		// Set the log level

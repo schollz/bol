@@ -29,7 +29,7 @@ build:
 		go build -o ../build/${BINARY}server
 	cd boltool && env GOOS=linux GOARCH=amd64 \
 		go build -o ../build/${BINARY}tool
-	cd build && zip -j ${BINARY}-${VERSION}-linux64.zip ${BINARY} ${BINARY}tool ${BINARY}server README.md LICENSE
+	cd build && zip -j ${BINARY}-${VERSION}-linux64.zip ${BINARY} ${BINARY}tool ${BINARY}server ../README.md ../LICENSE
 	rm build/boltool build/bol build/bolserver
 	echo "Building windows AMD64"
 	cd bol && env GOOS=windows GOARCH=amd64 \
@@ -40,7 +40,7 @@ build:
 		go build -o ../build/${BINARY}server.exe
 	cd boltool && env GOOS=windows GOARCH=amd64 \
 		go build -o ../build/${BINARY}tool.exe
-	cd build && zip -j ${BINARY}-${VERSION}-win64.zip ${BINARY}.exe ${BINARY}tool.exe ${BINARY}server.exe README.md LICENSE
+	cd build && zip -j ${BINARY}-${VERSION}-win64.zip ${BINARY}.exe ${BINARY}tool.exe ${BINARY}server.exe ../README.md ../LICENSE
 	rm build/boltool.exe build/bol.exe build/bolserver.exe
 
 .PHONY: delete
@@ -80,3 +80,4 @@ release:
 				--tag ${VERSION} \
 				--name "${BINARY}-${VERSION}-win64.zip" \
 				--file build/${BINARY}-${VERSION}-win64.zip
+	git pull

@@ -35,11 +35,14 @@ var apikeys = struct {
 
 var MaxArchiveBytes int
 var Port, Host string
+var (
+	Version, BuildTime, Build, OS, LastCommit string
+)
 
 func main() {
-	flag.IntVar(&MaxArchiveBytes, "limit", 10000000, "limit the max size of archive with backups (default 10 MB)")
-	flag.StringVar(&Port, "port", "9095", "set port (default 9095)")
-	flag.StringVar(&Host, "host", "https://bol.schollz.com", "set hostname (default https://bol.schollz.com)")
+	flag.IntVar(&MaxArchiveBytes, "limit", 10000000, "limit the max size (bytes) of archive with backups")
+	flag.StringVar(&Port, "port", "9095", "set port")
+	flag.StringVar(&Host, "host", "https://bol.schollz.com", "set hostname")
 	flag.Parse()
 	wd, _ = os.Getwd()
 	http.HandleFunc("/", HandleLogin)

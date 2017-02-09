@@ -14,6 +14,19 @@ LDFLAGS=-ldflags "-X main.Version=${VERSION} -X main.Build=${BUILD} -X main.Buil
 $(BINARY): $(SOURCES)
 	go build -ldflags "-X main.Version=${VERSION} -X main.Build=${BUILD} -X main.BuildTime=${BUILD_TIME} -X main.OS=linux_amd64" -o ${BINARY}
 
+.PHONY: build
+build:
+	env GOOS=linux GOARCH=amd64 \
+		go build -ldflags \
+		"-X main.OS=linux -X main.Version=${VERSION} -X main.Build=${BUILD} -X main.BuildTime=${BUILD_TIME}" \
+		-o ${BINARY}
+	go get -u -v github.com/jteeuwen/go-bindata/...
+	cd server && go-bindata static/ login.html post.html
+	cd server && env GOOS=linux GOARCH=amd64 \
+		go build -o ../${BINARY}server
+	cd tool && env GOOS=linux GOARCH=amd64 \
+		go build -o ../${BINARY}tool
+
 
 .PHONY: delete
 delete:
@@ -27,6 +40,9 @@ delete:
 
 .PHONY: release
 release:
+	echo "Bundle data"
+	go get -u -v github.com/jteeuwen/go-bindata/...
+	cd server && go-bindata static/ login.html post.html
 	echo "Moving tag"
 	git tag --force latest ${BUILD}
 	git push --force --tags
@@ -42,7 +58,11 @@ release:
 		go build -ldflags \
 		"-X main.OS=win64 -X main.Version=${VERSION} -X main.Build=${BUILD} -X main.BuildTime=${BUILD_TIME}" \
 		-o ${BINARY}.exe
-	zip -j ${BINARY}-${VERSION}-win64.zip ${BINARY}.exe README.md LICENSE
+	cd server && env GOOS=windows GOARCH=amd64 \
+		go build -o ../${BINARY}server.exe
+	cd tool && env GOOS=windows GOARCH=amd64 \
+		go build -o ../${BINARY}tool.exe
+	zip -j ${BINARY}-${VERSION}-win64.zip ${BINARY}.exe ${BINARY}tool.exe ${BINARY}server.exe README.md LICENSE
 	github-release upload \
 				--user ${USER} \
 				--repo ${BINARY} \
@@ -54,7 +74,11 @@ release:
 		go build -ldflags \
 		"-X main.OS=linux -X main.Version=${VERSION} -X main.Build=${BUILD} -X main.BuildTime=${BUILD_TIME}" \
 		-o ${BINARY}
-	zip -j ${BINARY}-${VERSION}-linux64.zip ${BINARY} README.md LICENSE
+	cd server && env GOOS=linux GOARCH=amd64 \
+		go build -o ../${BINARY}server
+	cd tool && env GOOS=linux GOARCH=amd64 \
+		go build -o ../${BINARY}tool
+	zip -j ${BINARY}-${VERSION}-linux64.zip ${BINARY} ${BINARY}tool ${BINARY}server README.md LICENSE
 	github-release upload \
 				--user ${USER} \
 				--repo ${BINARY} \
@@ -66,7 +90,11 @@ release:
 		go build -ldflags \
 		"-X main.OS=osx -X main.Version=${VERSION} -X main.Build=${BUILD} -X main.BuildTime=${BUILD_TIME}" \
 		-o ${BINARY}
-	zip -j ${BINARY}-${VERSION}-osx.zip ${BINARY} README.md LICENSE
+	cd server && env GOOS=darwin GOARCH=amd64 \
+		go build -o ../${BINARY}server
+	cd tool && env GOOS=darwin GOARCH=amd64 \
+		go build -o ../${BINARY}tool
+	zip -j ${BINARY}-${VERSION}-osx.zip ${BINARY} ${BINARY}tool ${BINARY}server README.md LICENSE
 	github-release upload \
 				--user ${USER} \
 				--repo ${BINARY} \

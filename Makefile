@@ -16,17 +16,32 @@ $(BINARY): $(SOURCES)
 
 .PHONY: build
 build:
-	env GOOS=linux GOARCH=amd64 \
+	# echo "Bundle data"
+	# go get -u -v github.com/jteeuwen/go-bindata/...
+	# cd server && go-bindata static/ login.html post.html
+	mkdir -p build
+	echo "Building Linux AMD64"
+	cd bol && env GOOS=linux GOARCH=amd64 \
 		go build -ldflags \
 		"-X main.OS=linux -X main.Version=${VERSION} -X main.Build=${BUILD} -X main.BuildTime=${BUILD_TIME}" \
-		-o ${BINARY}
-	go get -u -v github.com/jteeuwen/go-bindata/...
-	cd server && go-bindata static/ login.html post.html
-	cd server && env GOOS=linux GOARCH=amd64 \
-		go build -o ../${BINARY}server
-	cd tool && env GOOS=linux GOARCH=amd64 \
-		go build -o ../${BINARY}tool
-
+		-o ../build/${BINARY}
+	cd bolserver && env GOOS=linux GOARCH=amd64 \
+		go build -o ../build/${BINARY}server
+	cd boltool && env GOOS=linux GOARCH=amd64 \
+		go build -o ../build/${BINARY}tool
+	cd build && zip -j ${BINARY}-${VERSION}-linux64.zip ${BINARY} ${BINARY}tool ${BINARY}server README.md LICENSE
+	rm build/boltool build/bol build/bolserver
+	echo "Building windows AMD64"
+	cd bol && env GOOS=windows GOARCH=amd64 \
+		go build -ldflags \
+		"-X main.OS=win64 -X main.Version=${VERSION} -X main.Build=${BUILD} -X main.BuildTime=${BUILD_TIME}" \
+		-o ../build/${BINARY}.exe
+	cd bolserver && env GOOS=windows GOARCH=amd64 \
+		go build -o ../build/${BINARY}server.exe
+	cd boltool && env GOOS=windows GOARCH=amd64 \
+		go build -o ../build/${BINARY}tool.exe
+	cd build && zip -j ${BINARY}-${VERSION}-win64.zip ${BINARY}.exe ${BINARY}tool.exe ${BINARY}server.exe README.md LICENSE
+	rm build/boltool.exe build/bol.exe build/bolserver.exe
 
 .PHONY: delete
 delete:
@@ -40,9 +55,7 @@ delete:
 
 .PHONY: release
 release:
-	echo "Bundle data"
-	go get -u -v github.com/jteeuwen/go-bindata/...
-	cd server && go-bindata static/ login.html post.html
+	mkdir -p build
 	echo "Moving tag"
 	git tag --force latest ${BUILD}
 	git push --force --tags
@@ -53,51 +66,17 @@ release:
 	    --tag ${VERSION} \
 	    --name "${VERSION}" \
 	    --description "This is a standalone latest of ${BINARY}."
-	echo "Making Windows-AMD64"
-	env GOOS=windows GOARCH=amd64 \
-		go build -ldflags \
-		"-X main.OS=win64 -X main.Version=${VERSION} -X main.Build=${BUILD} -X main.BuildTime=${BUILD_TIME}" \
-		-o ${BINARY}.exe
-	cd server && env GOOS=windows GOARCH=amd64 \
-		go build -o ../${BINARY}server.exe
-	cd tool && env GOOS=windows GOARCH=amd64 \
-		go build -o ../${BINARY}tool.exe
-	zip -j ${BINARY}-${VERSION}-win64.zip ${BINARY}.exe ${BINARY}tool.exe ${BINARY}server.exe README.md LICENSE
-	github-release upload \
-				--user ${USER} \
-				--repo ${BINARY} \
-				--tag ${VERSION} \
-				--name "${BINARY}-${VERSION}-win64.zip" \
-				--file ${BINARY}-${VERSION}-win64.zip
 	echo "Making Linux-AMD64"
-	env GOOS=linux GOARCH=amd64 \
-		go build -ldflags \
-		"-X main.OS=linux -X main.Version=${VERSION} -X main.Build=${BUILD} -X main.BuildTime=${BUILD_TIME}" \
-		-o ${BINARY}
-	cd server && env GOOS=linux GOARCH=amd64 \
-		go build -o ../${BINARY}server
-	cd tool && env GOOS=linux GOARCH=amd64 \
-		go build -o ../${BINARY}tool
-	zip -j ${BINARY}-${VERSION}-linux64.zip ${BINARY} ${BINARY}tool ${BINARY}server README.md LICENSE
 	github-release upload \
 				--user ${USER} \
 				--repo ${BINARY} \
 				--tag ${VERSION} \
 				--name "${BINARY}-${VERSION}-linux64.zip" \
-				--file ${BINARY}-${VERSION}-linux64.zip
-	echo "Making OSX-AMD64"
-	env GOOS=darwin GOARCH=amd64 \
-		go build -ldflags \
-		"-X main.OS=osx -X main.Version=${VERSION} -X main.Build=${BUILD} -X main.BuildTime=${BUILD_TIME}" \
-		-o ${BINARY}
-	cd server && env GOOS=darwin GOARCH=amd64 \
-		go build -o ../${BINARY}server
-	cd tool && env GOOS=darwin GOARCH=amd64 \
-		go build -o ../${BINARY}tool
-	zip -j ${BINARY}-${VERSION}-osx.zip ${BINARY} ${BINARY}tool ${BINARY}server README.md LICENSE
+				--file build/${BINARY}-${VERSION}-linux64.zip
+	echo "Making Windows-AMD64"
 	github-release upload \
 				--user ${USER} \
 				--repo ${BINARY} \
 				--tag ${VERSION} \
-				--name "${BINARY}-${VERSION}-osx.zip" \
-				--file ${BINARY}-${VERSION}-osx.zip
+				--name "${BINARY}-${VERSION}-win64.zip" \
+				--file build/${BINARY}-${VERSION}-win64.zip

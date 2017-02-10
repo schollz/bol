@@ -142,3 +142,12 @@ Exporting releases a JSON file that is simply a list of documents (which are lis
   }
 ]
 ```
+
+# Testing
+
+This library can be tested by first running a *bolserver* and then using `go test`. E.g.
+
+```
+cd ../bolserver && go build && ./bolserver &
+cd ../ssed && go test
+```

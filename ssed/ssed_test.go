@@ -11,6 +11,14 @@ import (
 	"github.com/schollz/bol/utils"
 )
 
+func init() {
+	message := utils.CreateBolUser("test", "test", "http://localhost:9095")
+	if strings.Contains(message, "Problem") {
+		fmt.Println("Need to start a local server on port 9095 before testing")
+		os.Exit(-1)
+	}
+}
+
 func TestCreateDirs(t *testing.T) {
 	dir, _ := homedir.Dir()
 	os.RemoveAll(path.Join(dir, ".config", "ssed"))
@@ -151,7 +159,7 @@ func TestServer(t *testing.T) {
 	DebugMode()
 	EraseAll()
 	var fs Fs
-	fs.Init("test", "https://bol.schollz.com")
+	fs.Init("test", "http://localhost:9095")
 	fs.Open("test")
 	fs.Update("some text", "notes", "", "2014-11-20T13:00:00-05:00")
 	fs.Update("some other test", "journal", "", "2014-11-20T13:00:00-05:00")
@@ -163,10 +171,10 @@ func TestServer(t *testing.T) {
 	fs.Close()
 
 	os.RemoveAll(pathToLocalFolder)
-	fs.Init("test", "https://bol.schollz.com")
+	fs.Init("test", "http://localhost:9095")
 	fs.Open("test")
 	fs.Close()
-	fs.Init("test", "https://bol.schollz.com")
+	fs.Init("test", "http://localhost:9095")
 	err := fs.Open("test2")
 	fs.Close()
 	if err == nil {

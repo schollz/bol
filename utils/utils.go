@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math/rand"
+	"net/http"
 	"os"
 	"runtime"
 	"strconv"
@@ -273,4 +274,29 @@ func ReFormatDate(date string) string {
 
 func GetUnixTimestamp() string {
 	return strconv.Itoa(int(time.Now().UnixNano() / 1000000))
+}
+
+// CreateBolUser creates the specified user on the specified server
+func CreateBolUser(username string, password string, server string) string {
+	req, err := http.NewRequest("PUT", server+"/repo", nil)
+	if err != nil {
+		return "Problem creating user on server"
+	}
+	req.SetBasicAuth(username, password)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "Problem creating user on server"
+	}
+	defer resp.Body.Close()
+	htmlData, err := ioutil.ReadAll(resp.Body) //<--- here!
+	if err != nil {
+		return "Problem creating user on server"
+	}
+
+	if strings.Contains(string(htmlData), "inserted") {
+		return string(fmt.Sprintf("'%s' user created on server %s\n", username, server))
+	}
+	return ""
 }

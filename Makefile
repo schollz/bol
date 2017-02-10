@@ -103,4 +103,19 @@ release:
 				--tag ${VERSION} \
 				--name "${BINARY}-${VERSION}-win64.zip" \
 				--file build/${BINARY}-${VERSION}-win64.zip
+	echo "Making OSX"
+	github-release upload \
+				--user ${USER} \
+				--repo ${BINARY} \
+				--tag ${VERSION} \
+				--name "${BINARY}-${VERSION}-osx.zip" \
+				--file build/${BINARY}-${VERSION}-osx.zip
+	echo "Making Linux AFM"
+	github-release upload \
+				--user ${USER} \
+				--repo ${BINARY} \
+				--tag ${VERSION} \
+				--name "${BINARY}-${VERSION}-arm.zip" \
+				--file build/${BINARY}-${VERSION}-arm.zip
+
 	git pull

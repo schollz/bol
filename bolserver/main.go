@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -42,7 +43,7 @@ var (
 func main() {
 	flag.IntVar(&MaxArchiveBytes, "limit", 10000000, "limit the max size (bytes) of archive with backups")
 	flag.StringVar(&Port, "port", "9095", "set port")
-	flag.StringVar(&Host, "host", "https://bol.schollz.com", "set hostname")
+	flag.StringVar(&Host, "host", "", "set hostname")
 	flag.Parse()
 	wd, _ = os.Getwd()
 	http.HandleFunc("/", HandleLogin)
@@ -58,7 +59,11 @@ func main() {
 		// http.ServeFile(w, r, r.URL.Path[1:])
 	})
 	http.HandleFunc("/repo", HandleRepo) // POST latest repo
-	fmt.Printf("Running on 0.0.0.0:%s, aliased as %s\n", Port, Host)
+	if Host != "" {
+		fmt.Printf("Running on http://%s:%s, aliased as %s\n", GetLocalIP(), Port, Host)
+	} else {
+		fmt.Printf("Running on http://%s:%s\n", GetLocalIP(), Port)
+	}
 	fmt.Printf("Saving up to %d MB for archives\n", MaxArchiveBytes/1000000)
 	log.Fatal(http.ListenAndServe(":"+Port, nil))
 }
@@ -456,4 +461,22 @@ func cleanFiles(username string) {
 			break
 		}
 	}
+}
+
+// GetLocalIP returns the local ip address
+func GetLocalIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "localhost"
+	}
+	bestIP := "localhost"
+	for _, address := range addrs {
+		// check the address type and if it is not a loopback the display it
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil && (strings.Contains(ipnet.IP.String(), "192.168.1") || strings.Contains(ipnet.IP.String(), "192.168")) {
+				return ipnet.IP.String()
+			}
+		}
+	}
+	return bestIP
 }

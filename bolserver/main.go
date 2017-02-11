@@ -22,7 +22,6 @@ import (
 
 	"github.com/schollz/bol/utils"
 	"github.com/schollz/cryptopasta"
-	"github.com/schollz/quotation-explorer/getquote"
 )
 
 // https://gist.github.com/tristanwietsma/8444cf3cb5a1ac496203
@@ -268,7 +267,7 @@ func HandlePush(w http.ResponseWriter, r *http.Request) {
 		_, err = io.Copy(outFile, r.Body)
 		go cleanFiles(username)
 		log.Printf("PUSH: Wrote file '%s' for '%s'\n", fileName, username)
-		io.WriteString(w, getquote.GetQuote()+"\n")
+		io.WriteString(w, string(fmt.Sprintf("Wrote file '%s' for '%s'\n", fileName, username)))
 	} else {
 		log.Println("Incorect password for" + username)
 		w.WriteHeader(http.StatusUnauthorized)

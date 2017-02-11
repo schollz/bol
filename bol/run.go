@@ -19,6 +19,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	ssed "github.com/schollz/bol/ssed"
 	"github.com/schollz/bol/utils"
+	"github.com/schollz/quotation-explorer/getquote"
 )
 
 var logger *lumber.ConsoleLogger
@@ -117,6 +118,7 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 			workingFile = "notes"
 		}
 		fmt.Printf("Opening %s\n", workingFile)
+		fmt.Printf("\n%s\n", getquote.GetQuote())
 		entries = fs.GetDocument(workingFile)
 	} else {
 		logger.Debug("Parsing whether it is a document or entry")

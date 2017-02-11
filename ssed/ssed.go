@@ -321,7 +321,7 @@ func (ssed *Fs) download() error {
 	}
 	if matching {
 		logger.Debug("Not downloading since MD5 matches")
-		return errors.New("No need to update, md5 matches")
+		return nil
 	}
 	defer timeTrack(time.Now(), "download")
 	req, err := http.NewRequest("GET", ssed.method+"/repo", nil)
@@ -509,8 +509,8 @@ func (ssed *Fs) Close() {
 	}
 	os.Chdir(wd)
 
-	err, matching := ssed.doesMD5MatchServer()
-	if ssed.successfulPull && !matching && err == nil {
+	_, matching := ssed.doesMD5MatchServer()
+	if ssed.successfulPull && !matching {
 		ssed.upload()
 	} else {
 		logger.Debug("Skipping upload")

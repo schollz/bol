@@ -211,9 +211,9 @@ func (ssed *Fs) loadConfiguration(username, method string) error {
 		if len(username) == 0 {
 			return errors.New("Need to have username to intialize for first time")
 		}
-		if len(method) > 0 && !strings.Contains(method, "http") && !strings.Contains(method, "ssh") {
-			return errors.New("Method must be http or ssh")
-		}
+		// if len(method) > 0 && !strings.Contains(method, "http") && !strings.Contains(method, "ssh") {
+		// 	return errors.New("Method must be http or ssh")
+		// }
 		// Configuration file doesn't exists, create it
 		configs = []config{
 			{
@@ -241,9 +241,9 @@ func (ssed *Fs) loadConfiguration(username, method string) error {
 		}
 		if foundConfig == -1 {
 			// configuration is new, and is added to the front as it will be the new default
-			if len(method) > 0 && !strings.Contains(method, "http") && !strings.Contains(method, "ssh") {
-				return errors.New("Method must be http or ssh")
-			}
+			// if len(method) > 0 && !strings.Contains(method, "http") && !strings.Contains(method, "ssh") {
+			// 	return errors.New("Method must be http or ssh")
+			// }
 			configs = append([]config{{
 				Username: username,
 				Method:   method,
@@ -452,6 +452,7 @@ func (ssed *Fs) DeleteDocument(documentName string) {
 // Close closes the repo and pushes if it was succesful pulling
 func (ssed *Fs) Close() {
 	defer timeTrack(time.Now(), "Closing archive")
+	defer os.Remove(path.Join(PathToTempFolder, "temp"))
 	wd, _ := os.Getwd()
 	os.Chdir(path.Join(pathToLocalFolder, ssed.username))
 	filesFullPath, _ := filepath.Glob(path.Join(pathToLocalFolder, ssed.username, "*.json"))
@@ -459,9 +460,10 @@ func (ssed *Fs) Close() {
 	logger.Debug("archiving %d files", len(filesFullPath))
 	for i, file := range filesFullPath {
 		fileList[i] = filepath.Base(file)
-		// logger.Debug("archiving %s", fileList[i])
 	}
+	fmt.Println(strings.Join(fileList, "\n"))
 	archiver.TarBz2.Make(ssed.archiveName, fileList)
+	os.Remove(path.Join("..", ssed.archiveName))
 	os.Rename(ssed.archiveName, path.Join("..", ssed.archiveName))
 	os.Chdir(wd)
 
@@ -486,7 +488,6 @@ func (ssed *Fs) Close() {
 	// 		}
 	// 	}
 	// }
-	os.Remove(path.Join(PathToTempFolder, "temp"))
 }
 
 func (ssed *Fs) delete() error {

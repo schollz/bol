@@ -17,8 +17,8 @@ import (
 	"time"
 
 	"github.com/jcelliott/lumber"
-	"github.com/mholt/archiver"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/schollz/archiver"
 	"github.com/schollz/bol/utils"
 )
 
@@ -278,32 +278,73 @@ func (ssed *Fs) downloadAndDecompress() {
 	ssed.wg.Done()
 }
 
+func (ssed *Fs) doesMD5MatchServer() (error, bool) {
+
+	if !strings.Contains(ssed.method, "http") {
+		return errors.New("No server available"), false
+	}
+
+	defer timeTrack(time.Now(), "doesMD5MatchServer")
+	req, err := http.NewRequest("GET", ssed.method+"/md5", nil)
+	if err != nil {
+		return err, false
+	}
+	req.SetBasicAuth(ssed.username, "") // no password needed
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err, false
+	}
+	defer resp.Body.Close()
+	htmlData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err, false
+	}
+	currentMD5, err := utils.ComputeMd5(path.Join(pathToLocalFolder, ssed.archiveName))
+	if err != nil {
+		logger.Debug("Problem: %s", err.Error())
+	}
+	matchingMD5 := currentMD5 == string(htmlData)
+	logger.Debug("server md5 '%s' = local md5 '%s' = %v", string(htmlData), currentMD5, matchingMD5)
+	return nil, matchingMD5
+}
+
 func (ssed *Fs) download() error {
 	// download repo
-	if strings.Contains(ssed.method, "http") {
-		defer timeTrack(time.Now(), "download")
-		req, err := http.NewRequest("GET", ssed.method+"/repo", nil)
-		if err != nil {
-			return err
-		}
-		req.SetBasicAuth(ssed.username, "") // no password needed
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-
-		outFile, err := os.Create(path.Join(pathToRemoteFolder, ssed.archiveName))
-		if err != nil {
-			return err
-		}
-		_, err = io.Copy(outFile, resp.Body)
-		if err != nil {
-			return err
-		}
-		outFile.Close()
+	if !strings.Contains(ssed.method, "http") {
+		return errors.New("No server available")
 	}
+
+	err, matching := ssed.doesMD5MatchServer()
+	if err != nil {
+		return err
+	}
+	if matching {
+		logger.Debug("Not downloading since MD5 matches")
+		return errors.New("No need to update, md5 matches")
+	}
+	defer timeTrack(time.Now(), "download")
+	req, err := http.NewRequest("GET", ssed.method+"/repo", nil)
+	if err != nil {
+		return err
+	}
+	req.SetBasicAuth(ssed.username, "") // no password needed
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	outFile, err := os.Create(path.Join(pathToRemoteFolder, ssed.archiveName))
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(outFile, resp.Body)
+	if err != nil {
+		return err
+	}
+	outFile.Close()
 
 	return nil
 }
@@ -324,10 +365,8 @@ func (ssed *Fs) decompress() {
 
 	// open local repo
 	sourceRepo := path.Join(pathToLocalFolder, ssed.archiveName)
-	if !utils.Exists(path.Join(pathToLocalFolder, ssed.username)) {
+	if utils.Exists(sourceRepo) && !utils.Exists(path.Join(pathToLocalFolder, ssed.username)) {
 		os.Mkdir(path.Join(pathToLocalFolder, ssed.username), 0755)
-	}
-	if utils.Exists(sourceRepo) {
 		wd, _ := os.Getwd()
 		os.Chdir(pathToLocalFolder)
 		logger.Debug("Opening local")
@@ -461,14 +500,20 @@ func (ssed *Fs) Close() {
 	for i, file := range filesFullPath {
 		fileList[i] = filepath.Base(file)
 	}
-	fmt.Println(strings.Join(fileList, "\n"))
-	archiver.TarBz2.Make(ssed.archiveName, fileList)
-	os.Remove(path.Join("..", ssed.archiveName))
-	os.Rename(ssed.archiveName, path.Join("..", ssed.archiveName))
+	for _, ff := range archiver.SupportedFormats {
+		if !ff.Match(ssed.archiveName) {
+			continue
+		}
+		ff.Make(path.Join("..", ssed.archiveName), fileList)
+		break
+	}
 	os.Chdir(wd)
 
-	if ssed.successfulPull {
+	err, matching := ssed.doesMD5MatchServer()
+	if ssed.successfulPull && !matching && err == nil {
 		ssed.upload()
+	} else {
+		logger.Debug("Skipping upload")
 	}
 	// // shred the data files
 	// if ssed.shredding {

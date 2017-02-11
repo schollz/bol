@@ -57,7 +57,8 @@ func main() {
 		w.Write(data)
 		// http.ServeFile(w, r, r.URL.Path[1:])
 	})
-	http.HandleFunc("/repo", HandleRepo) // POST latest repo
+	http.HandleFunc("/repo", HandleRepo)    // POST latest repo
+	http.HandleFunc("/md5", HandleCheckMD5) // GET latest MD5 for user
 	if Host != "" {
 		fmt.Printf("Running on http://%s:%s, aliased as %s\n", GetLocalIP(), Port, Host)
 	} else {
@@ -303,12 +304,38 @@ func HandleDelete(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func HandleCheckMD5(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		w.WriteHeader(http.StatusNotImplemented)
+		io.WriteString(w, "GET request only")
+		return
+	}
+	username, _, _ := r.BasicAuth()
+	log.Println("Got md5 request from " + username)
+	latestFileName, err := getLatestFileName(username)
+	if err == nil {
+		md5, err2 := utils.ComputeMd5(path.Join(wd, "archive", username, latestFileName))
+		log.Printf("Computed md5 for '%s': %s", username, md5)
+		if err2 != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			io.WriteString(w, err2.Error())
+		} else {
+			w.WriteHeader(http.StatusOK)
+			io.WriteString(w, md5)
+		}
+	} else {
+		log.Println("repo does not exist")
+		w.WriteHeader(http.StatusNoContent)
+		io.WriteString(w, "repo does not exist")
+	}
+}
+
 func HandlePull(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
 	username, _, _ := r.BasicAuth()
 	log.Println("Got repo request from " + username)
 	latestFileName, err := getLatestFileName(username)
 	if err == nil {
+		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "octet-stream")
 		file, _ := os.Open(path.Join(wd, "archive", username, latestFileName))
 		io.Copy(w, file)

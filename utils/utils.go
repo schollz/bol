@@ -300,3 +300,20 @@ func CreateBolUser(username string, password string, server string) string {
 	}
 	return ""
 }
+
+// ComputeMd5 returns the md5sum of a file
+// http://dev.pawelsz.eu/2014/11/google-golang-compute-md5-of-file.html
+func ComputeMd5(filePath string) (string, error) {
+	var result []byte
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hash := md5.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(hash.Sum(result)), nil
+}

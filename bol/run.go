@@ -117,7 +117,7 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 		if len(workingFile) == 0 {
 			workingFile = "notes"
 		}
-		fmt.Printf("Opening %s\n", workingFile)
+		fmt.Printf("Opening '%s'...", workingFile)
 		fmt.Printf("\n\n%s\n\n", getquote.GetQuote())
 		entries = fs.GetDocument(workingFile)
 	} else {

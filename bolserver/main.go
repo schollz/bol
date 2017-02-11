@@ -267,7 +267,7 @@ func HandlePush(w http.ResponseWriter, r *http.Request) {
 		_, err = io.Copy(outFile, r.Body)
 		go cleanFiles(username)
 		log.Printf("PUSH: Wrote file '%s' for '%s'\n", fileName, username)
-		io.WriteString(w, string(fmt.Sprintf("Wrote file '%s' for '%s'\n", fileName, username)))
+		io.WriteString(w, string(fmt.Sprintf("Wrote file for '%s'\n", username)))
 	} else {
 		log.Println("Incorect password for" + username)
 		w.WriteHeader(http.StatusUnauthorized)

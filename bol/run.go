@@ -128,9 +128,19 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 	fullText := ""
 	for _, entry := range entries {
 		fullText += fmt.Sprintf("%s %s\n%s\n\n%s\n\n", JOURNAL_DELIMITER, entry.Entry, entry.Timestamp, strings.TrimSpace(entry.Text))
+		if Summarize {
+			truncated := strings.Fields(entry.Text)
+			if len(truncated) > 10 {
+				truncated = truncated[:10]
+			}
+			fmt.Printf("%10s (%15s)\t%s\n", strings.Split(entry.Timestamp, " ")[0], entry.Entry, strings.Join(truncated, " "))
+		}
 	}
 	if isNewEntry {
 		fullText += fmt.Sprintf("%s %s\n%s\n\n\n%s", JOURNAL_DELIMITER, utils.GetRandomMD5Hash(), utils.GetCurrentDate(), "")
+	}
+	if Summarize {
+		return
 	}
 
 	newText := WriteEntry(fullText, "vim")

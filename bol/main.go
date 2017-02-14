@@ -15,7 +15,7 @@ import (
 
 var (
 	Version, BuildTime, Build, OS, LastCommit string
-	Debug                                     bool
+	Debug, Summarize                          bool
 	DontEncrypt, Clean                        bool
 	ResetConfig, DumpFile                     bool
 	ImportOldFile, ImportFile                 bool
@@ -109,11 +109,11 @@ EXAMPLE USAGE:
 		// 	Usage:       "Delete `X`, where X is a document or entry",
 		// 	Destination: &bol.DeleteFlag,
 		// },
-		// cli.BoolFlag{
-		// 	Name:        "summary",
-		// 	Usage:       "Gets summary",
-		// 	Destination: &bol.Summarize,
-		// },
+		cli.BoolFlag{
+			Name:        "summary",
+			Usage:       "Gets summary",
+			Destination: &Summarize,
+		},
 		// cli.BoolFlag{
 		// 	Name:        "stats",
 		// 	Usage:       "Print stats",

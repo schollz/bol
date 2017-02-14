@@ -2,7 +2,7 @@
 
 > I wanted a notebook that functioned not as a body but as a mind, a notebook that collected, interposed, collaged: a machine whose components could move, whose cogs, chutes, and levers were air. - [Patricia Lockwood](http://www.newyorker.com/magazine/2016/11/28/finding-poetry-in-a-note-taking-app)
 
-*bol* is a system for editing and synchronization of encrypted documents. The main utility is a command-line program that lets you write/view encrypted documents. Synchronization is provided through a *bolserver* which handles synchronization and also allows writing new entires to documents. Both utilities are available in [the latest release](https://github.com/schollz/bol/releases/latest) as a self-contained executable binary.
+*bol* is a program for editing and synchronization of encrypted documents. The main utility is a command-line program (`bol`) that lets you write/view encrypted documents using `vim`. Synchronization is provided through a server (`bolserver`), where updates are pushed/pulled. All documents can be easily backed-up into an encrypted JSON file which is decrypted using an additional tool (`boltool`). All utilities are available in [the latest release](https://github.com/schollz/bol/releases/latest) as a self-contained executable binary for most popular OSes and there are no requirements, except `vim` (however, `vim` is bundled for the Windows users).
 
 # Install
 
@@ -33,6 +33,8 @@ bol
 
 **Change user** or the server, by using `bol -config`.
 
+**Summarize** a document using `bol -summary`.
+
 # Server
 
 The default server is a public server, https://bol.schollz.com. You can also run your own server simply running `bolserver`. Then, use `bol -config` and type in the server address, now `http://localhost:9095` or whichever you set it to.
@@ -43,6 +45,35 @@ The server is optional, and only required if you want synchronized entires on mu
 
 *bol* uses `ssed` as a backend for the encrypted storage and synchronization. For more information, [see the `ssed` README](https://github.com/schollz/bol/blob/master/ssed/README.md). Essentially, *bol* stores all entries as AES-encrypted JSON files which are then bundled as a `tar.bz2` archive which is synchronized with a server. Nothing can ever be deleted (only ignored), and all changes are stored.
 
+# Inspiration
+
+Here is some software which are similar to *bol*, but often require other software or system-specific utilities. I engojoy these software, and used a lot of inpsiration from them, but ultimately I found that *bol* could provide some functionality or utility that was still absent.
+
+-   **13 lines of shell** [\[site\]](https://gist.github.com/schollz/27b4ffe562b0b74bf8ee1e8055680d22)- git-based journal  
+    No encryption, no editing past entries, no version control, no deletion - but only 13 lines!
+
+-   **Cryptpad** [\[site\]][1] - zero knowledge realtime encrypted editor in your web browser  
+    Requires internet access, and a browser, difficult to reconstruct many documents.
+
+-   **jrnl.sh** [\[site\]][2] - command line journal application with encryption  
+    Requires Python. Syncing only available via Dropbox which won’t support merging encrypted files if editing offline.
+
+-   **ntbk** [\[site\]][3] - command line journal  
+    Requires Node.js. Syncing only available via Dropbox which won’t support merging encrypted files if editing offline.
+
+-   **vimwiki** [\[site\]][4] - command line editor with [capability of distributed encryption]  
+    Requires system-specific filesystem encryption (e.g. [eCryptFS]). Works with any DVCS, but merges are not handled.
+
+-   **Org mode** [\[site\]][5] - fast and effective plain-text system for authoring documents  
+    Requires `emacs`, requires adding DVCS later
+
+  [1]: https://beta.cryptpad.fr/pad/
+  [2]: http://jrnl.sh/
+  [3]: hhttps://www.npmjs.com/package/ntbk
+  [4]: http://vimwiki.github.io/
+  [capability of distributed encryption]: http://www.stochasticgeometry.ie/2012/11/23/vimwiki/
+  [eCryptFS]: http://ecryptfs.org/
+  [5]: http://orgmode.org/
 # Contributing
 
 I'm open to contributions, submit a pull request.

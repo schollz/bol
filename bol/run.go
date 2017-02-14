@@ -143,7 +143,7 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 		return
 	}
 
-	newText := WriteEntry(fullText, "vim")
+	newText := WriteEntry(fullText, "vim", len(entries) == 1)
 	for _, splitText := range strings.Split(newText, JOURNAL_DELIMITER) {
 		lines := strings.Split(splitText, "\n")
 		if len(lines) < 3 {
@@ -162,7 +162,7 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 	}
 }
 
-func WriteEntry(text string, editor string) string {
+func WriteEntry(text string, editor string, singleEntry bool) string {
 	logger.Debug("Editing file")
 
 	var cmdArgs []string
@@ -183,31 +183,26 @@ func! WordProcessorModeCLI()
 	normal zt
 endfu
 com! WPCLI call WordProcessorModeCLI()`
-		// Append to .vimrc file
-		if utils.Exists(path.Join(ssed.PathToTempFolder, ".vimrc")) {
-			// Check if .vimrc file contains code
-			logger.Debug("Found .vimrc.")
-			fileContents, err := ioutil.ReadFile(path.Join(ssed.PathToTempFolder, ".vimrc"))
-			if err != nil {
-				log.Fatal(err)
-			}
-			if !strings.Contains(string(fileContents), "com! WPCLI call WordProcessorModeCLI") {
-				// Append to fileContents
-				logger.Debug("WPCLI not found in .vimrc, adding it...")
-				newvimrc := string(fileContents) + "\n" + vimrc
-				err := ioutil.WriteFile(path.Join(ssed.PathToTempFolder, ".vimrc"), []byte(newvimrc), 0644)
-				if err != nil {
-					log.Fatal(err)
-				}
-			} else {
-				logger.Debug("WPCLI found in .vimrc.")
-			}
-		} else {
-			logger.Debug("Can not find .vimrc, creating new .vimrc...")
-			err := ioutil.WriteFile(path.Join(ssed.PathToTempFolder, ".vimrc"), []byte(vimrc), 0644)
-			if err != nil {
-				log.Fatal(err)
-			}
+		if singleEntry {
+			vimrc = `set nocompatible
+	set backspace=2
+	func! WordProcessorModeCLI()
+		setlocal formatoptions=t1
+		setlocal textwidth=80
+		map j gj
+		map k gk
+		set formatprg=par
+		setlocal wrap
+		setlocal linebreak
+		setlocal noexpandtab
+		normal zt
+	endfu
+	com! WPCLI call WordProcessorModeCLI()`
+		}
+
+		err := ioutil.WriteFile(path.Join(ssed.PathToTempFolder, ".vimrc"), []byte(vimrc), 0644)
+		if err != nil {
+			log.Fatal(err)
 		}
 
 		cmdArgs = []string{"-u", path.Join(ssed.PathToTempFolder, ".vimrc"), "-c", "WPCLI", "+startinsert", path.Join(ssed.PathToTempFolder, "temp")}

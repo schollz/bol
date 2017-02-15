@@ -2,7 +2,7 @@
 
 > I wanted a notebook that functioned not as a body but as a mind, a notebook that collected, interposed, collaged: a machine whose components could move, whose cogs, chutes, and levers were air. - [Patricia Lockwood](http://www.newyorker.com/magazine/2016/11/28/finding-poetry-in-a-note-taking-app)
 
-*bol* is a program for editing and synchronization of encrypted documents. The main utility is a command-line program (`bol`) that lets you write/view encrypted documents using `vim`. Synchronization is provided through a server (`bolserver`), where updates are pushed/pulled. All documents can be easily backed-up into an encrypted JSON file which is decrypted using an additional tool (`boltool`). All utilities are available in [the latest release](https://github.com/schollz/bol/releases/latest) as a self-contained executable binary for most popular OSes and there are no requirements, except a text-editor (however, `vim` is bundled for the Windows users).
+*bol* is a client program for editing and synchronization of encrypted documents. The main utility is a command-line program (`bol`) that lets you write/view encrypted documents using your favorite command-line editor. Synchronization is optional and provided through a server program (`bolserver`), where updates are pushed/pulled. A public server is available at https://bol.schollz.com. Both utilities are available in [the latest release](https://github.com/schollz/bol/releases/latest) as a self-contained executable binary for most popular OSes and there are no requirements, except a text-editor (however, `vim` is bundled for the Windows users).
 
 # Install
 

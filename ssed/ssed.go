@@ -855,7 +855,6 @@ func (ssed *Fs) DumpAll() (string, error) {
 	}
 	bJson, _ := json.MarshalIndent(documentList, "", " ")
 	utils.EncryptToFile(bJson, ssed.password, filename)
-	fmt.Printf("\nContents written to %s\nRead using boltool --decrypt %s\n\n", filename, filename)
 	return filename, nil
 }
 

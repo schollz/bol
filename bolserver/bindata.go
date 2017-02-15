@@ -188,7 +188,7 @@ func postHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "post.html", size: 2467, mode: os.FileMode(436), modTime: time.Unix(1487182048, 0)}
+	info := bindataFileInfo{name: "post.html", size: 2467, mode: os.FileMode(436), modTime: time.Unix(1487191573, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

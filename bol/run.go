@@ -104,7 +104,8 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 		}
 	}()
 	if dumpFile {
-		fs.DumpAll()
+		filename, _ := fs.DumpAll()
+		fmt.Printf("\nContents written to %s\nRead using bol --decrypt %s\n\n", filename, filename)
 		return
 	}
 

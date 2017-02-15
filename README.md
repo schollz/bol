@@ -1,14 +1,15 @@
-# :book: :palm_tree: bol
+#  bol :book:
 
 > I wanted a notebook that functioned not as a body but as a mind, a notebook that collected, interposed, collaged: a machine whose components could move, whose cogs, chutes, and levers were air. - [Patricia Lockwood](http://www.newyorker.com/magazine/2016/11/28/finding-poetry-in-a-note-taking-app)
 
-*bol* is a client program for editing and synchronization of encrypted documents. The main utility is a command-line program (`bol`) that lets you write/view encrypted documents using your favorite command-line editor. Synchronization is optional and provided through a server program (`bolserver`), where updates are pushed/pulled. A public server is available at https://bol.schollz.com. Both utilities are available in [the latest release](https://github.com/schollz/bol/releases/latest) as a self-contained executable binary for most popular OSes and there are no requirements, except a text-editor (however, `vim` is bundled for the Windows users).
+
+*bol* is a client program for editing and synchronization of encrypted documents. All local and remote files are encrypted with AES-256. The main utility is a command-line program (`bol`) that lets you write/view encrypted documents using your favorite command-line editor. Synchronization is optional and provided through a server program (`bolserver`), where updates are pushed/pulled. A public server is available at https://bol.schollz.com. Both utilities are available in [the latest release](https://github.com/schollz/bol/releases/latest) as a self-contained executable binary for most popular OSes and there are no requirements, except a text-editor (however, `vim` is bundled for the Windows users).
 
 # Install
 
 [Download from releases](https://github.com/schollz/bol/releases/latest).
 
-Or, if you have Go1.7+, just install via `go get`:
+Or, if you have Go1.7+, just install via
 
 ```
 go get -u -v github.com/schollz/bol/...
@@ -16,18 +17,15 @@ go get -u -v github.com/schollz/bol/...
 
 # Usage
 
-Just run
+Just run `bol` from the command line or goto the server (https://bol.schollz.com) to add and view entries.
 
-```
-bol
-```
+Command-line help:
 
-
-**Delete an entry** by editing the entry and replacing the entire entry with ```ignore entry```. **Delete a document** by making a new entry in that document that says ```ignore document```. However, nothing is really deleted, as *bol* will save a copy of every entry and change committed to it.
+**Delete an entry** by editing the entry and replacing the entire entry with `ignore entry`. **Delete a document** by making a new entry in that document that says `ignore document`. However, nothing is really deleted, as *bol* will save a copy of every entry and change committed to it.
 
 **Edit a specific document/entry** using the command `bol DocumentName/EntryName`.
 
-**Backup everything** to an AES-encrypted JSON file using `bol -dump`. The dump file `user-20ZZ-YY-XX.bol` can be read using the boltool, `boltool -decrypt user-20ZZ-YY-XX.bol`.
+**Backup everything** to an AES-encrypted JSON file using `bol -dump`. The dump file `user-20ZZ-YY-XX.bol` can be decrypted using `bol -decrypt user-20ZZ-YY-XX.bol`.
 
 **Erase all local files** using `bol -clean`. This will not remove remote files, there is no way to remove remote files.
 

@@ -13,6 +13,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/schollz/bol/ssed"
+	"github.com/schollz/bol/utils"
 	"github.com/urfave/cli"
 )
 
@@ -22,6 +23,7 @@ var (
 	DontEncrypt, Clean                                bool
 	ResetConfig, DumpFile                             bool
 	ImportOldFile, ImportFile                         bool
+	encryptFile, decryptFile                          string
 )
 
 func main() {
@@ -47,11 +49,42 @@ func main() {
 
 	 https://github.com/schollz/bol
 
+	 (C) 2016-2017 Z. N. Scholl
+
 EXAMPLE USAGE:
    bol new.txt # create new / edit a document, 'new.txt'
    bol Entry123 # edit a entry, 'Entry123'`
 
 	app.Action = func(c *cli.Context) error {
+
+		fileName := ""
+		if len(decryptFile) > 0 {
+			fileName = decryptFile
+		} else if len(encryptFile) > 0 {
+			fileName = encryptFile
+		}
+		if len(fileName) > 0 {
+			if utils.Exists(fileName) {
+				password := utils.GetPassword()
+				if len(encryptFile) > 0 {
+					b, _ := ioutil.ReadFile(fileName)
+					utils.EncryptToFile(b, password, fileName)
+					fmt.Printf("\nEncrypted as %s", fileName)
+				} else {
+					b, err := utils.DecryptFromFile(password, fileName)
+					if err == nil {
+						ioutil.WriteFile(fileName, b, 0644)
+						fmt.Printf("\n%s unencrypted", fileName)
+					} else {
+						fmt.Println("\nIncorrect password")
+					}
+				}
+			} else {
+				fmt.Printf("%s does not exist", fileName)
+			}
+			return nil
+		}
+
 		// Set the log level
 		if Debug {
 			ssed.DebugMode()
@@ -61,7 +94,7 @@ EXAMPLE USAGE:
 
 		if len(Editor) > 0 {
 			Editor = strings.TrimSpace(strings.ToLower(Editor))
-			if Editor == "vim" || Editor == "emacs" || Editor == "micro" {
+			if Editor == "vim" || Editor == "emacs" || Editor == "micro" || Editor == "nano" {
 				ioutil.WriteFile(path.Join(homePath, ".config", "bol", "editor"), []byte(Editor), 0644)
 				fmt.Printf("Editor set to ")
 				c := color.New(color.FgHiCyan)
@@ -74,6 +107,7 @@ EXAMPLE USAGE:
 				fmt.Println("- vim:   ftp://ftp.vim.org/pub/vim/pc/vim80-069w32.zip")
 				fmt.Println("- micro: https://github.com/zyedidia/micro/releases/latest")
 				fmt.Println("- emacs")
+				fmt.Println("- nano")
 			}
 			return nil
 		}
@@ -110,8 +144,18 @@ EXAMPLE USAGE:
 		},
 		cli.StringFlag{
 			Name:        "editor",
-			Usage:       "express which `editor` to use (micro / vim / emacs)",
+			Usage:       "select either `vim|nano|emacs|micro`",
 			Destination: &Editor,
+		},
+		cli.StringFlag{
+			Name:        "decrypt",
+			Usage:       "decrypt `file`",
+			Destination: &decryptFile,
+		},
+		cli.StringFlag{
+			Name:        "encrypt",
+			Usage:       "encrypt `file`",
+			Destination: &encryptFile,
 		},
 		// cli.BoolFlag{
 		// 	Name:        "importold",

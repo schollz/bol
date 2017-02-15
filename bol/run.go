@@ -92,6 +92,9 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 	}
 	defer func() {
 		err := fs.Close()
+		if dumpFile {
+			return
+		}
 		if err != nil {
 			c := color.New(color.FgCyan)
 			c.Printf("\nUpdated local copy of '%s'\n", workingFile)
@@ -311,6 +314,7 @@ com! WPCLI call WordProcessorModeCLI()`
 			c.Println("- vim:   ftp://ftp.vim.org/pub/vim/pc/vim80-069w32.zip")
 			c.Println("- micro: https://github.com/zyedidia/micro/releases/latest")
 			c.Println("- emacs")
+			c.Println("- nano")
 			c.Println("\nYou can switch editors with\n\n\tbol --editor [vim|emacs|micro]")
 			fmt.Println("")
 			os.Exit(-1)

@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/jcelliott/lumber"
 	"github.com/kardianos/osext"
 	homedir "github.com/mitchellh/go-homedir"
@@ -133,7 +134,11 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 			if len(truncated) > 10 {
 				truncated = truncated[:10]
 			}
-			fmt.Printf("%10s (%12s)\t%s\n", strings.Split(entry.Timestamp, " ")[0], entry.Entry, strings.Join(truncated, " "))
+			c := color.New(color.FgCyan)
+			c.Printf("%10s", strings.Split(entry.Timestamp, " ")[0])
+			c = color.New(color.FgHiRed)
+			c.Printf(" (%10s)", entry.Entry)
+			fmt.Printf("  %s\n", strings.Join(truncated, " "))
 		}
 	}
 	if isNewEntry {

@@ -28,10 +28,8 @@ build:
 		-o ../build/${BINARY}
 	cd bolserver && env GOOS=linux GOARCH=amd64 \
 		go build -o ../build/${BINARY}server
-	cd boltool && env GOOS=linux GOARCH=amd64 \
-		go build -o ../build/${BINARY}tool
-	cd build && zip -j ${BINARY}-${VERSION}-linux64.zip ${BINARY} ${BINARY}tool ${BINARY}server ../README.md ../LICENSE
-	rm build/boltool build/bol build/bolserver
+	cd build && zip -j ${BINARY}-${VERSION}-linux64.zip ${BINARY} ${BINARY}server ../README.md ../LICENSE
+	rm build/bol build/bolserver
 	echo "Building windows AMD64"
 	cd bol && env GOOS=windows GOARCH=amd64 \
 		go build -ldflags \
@@ -39,10 +37,8 @@ build:
 		-o ../build/${BINARY}.exe
 	cd bolserver && env GOOS=windows GOARCH=amd64 \
 		go build -o ../build/${BINARY}server.exe
-	cd boltool && env GOOS=windows GOARCH=amd64 \
-		go build -o ../build/${BINARY}tool.exe
-	cd build && zip -j ${BINARY}-${VERSION}-win64.zip ${BINARY}.exe ${BINARY}tool.exe ${BINARY}server.exe ../README.md ../LICENSE
-	rm build/boltool.exe build/bol.exe build/bolserver.exe
+	cd build && zip -j ${BINARY}-${VERSION}-win64.zip ${BINARY}.exe ${BINARY}server.exe ../README.md ../LICENSE
+	rm build/bol.exe build/bolserver.exe
 	echo "Building OSX AMD64"
 	cd bol && env GOOS=darwin GOARCH=amd64 \
 		go build -ldflags \
@@ -50,10 +46,8 @@ build:
 		-o ../build/${BINARY}
 	cd bolserver && env GOOS=darwin GOARCH=amd64 \
 		go build -o ../build/${BINARY}server
-	cd boltool && env GOOS=darwin GOARCH=amd64 \
-		go build -o ../build/${BINARY}tool
-	cd build && zip -j ${BINARY}-${VERSION}-osx.zip ${BINARY} ${BINARY}tool ${BINARY}server ../README.md ../LICENSE
-	rm build/boltool build/bol build/bolserver
+	cd build && zip -j ${BINARY}-${VERSION}-osx.zip ${BINARY} ${BINARY}server ../README.md ../LICENSE
+	rm build/bol build/bolserver
 	echo "Building ARM"
 	cd bol && env GOOS=linux GOARCH=arm \
 		go build -ldflags \
@@ -61,10 +55,8 @@ build:
 		-o ../build/${BINARY}
 	cd bolserver && env GOOS=linux GOARCH=arm \
 		go build -o ../build/${BINARY}server
-	cd boltool && env GOOS=linux GOARCH=arm \
-		go build -o ../build/${BINARY}tool
-	cd build && zip -j ${BINARY}-${VERSION}-arm.zip ${BINARY} ${BINARY}tool ${BINARY}server ../README.md ../LICENSE
-	rm build/boltool build/bol build/bolserver
+	cd build && zip -j ${BINARY}-${VERSION}-arm.zip ${BINARY} ${BINARY}server ../README.md ../LICENSE
+	rm build/bol build/bolserver
 
 .PHONY: delete
 delete:

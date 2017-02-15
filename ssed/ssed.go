@@ -122,7 +122,6 @@ func EraseConfig() {
 }
 
 func EraseAll() {
-	fmt.Println("Erasing all files...")
 	createDirs()
 	CleanUp()
 	EraseConfig()
@@ -406,10 +405,8 @@ func (ssed *Fs) copyOverFiles() {
 // }
 
 func (ssed *Fs) Open(password string) error {
-	fmt.Print("\nSyncing...")
 	// only continue if the downloading is finished
 	ssed.wg.Wait()
-	fmt.Print("done.\n")
 	logger.Debug("Finished waiting")
 
 	// check password against one of the files (if they exist)
@@ -489,7 +486,8 @@ func (ssed *Fs) DeleteDocument(documentName string) {
 }
 
 // Close closes the repo and pushes if it was succesful pulling
-func (ssed *Fs) Close() {
+func (ssed *Fs) Close() error {
+	var err error
 	defer timeTrack(time.Now(), "Closing archive")
 	defer os.Remove(path.Join(PathToTempFolder, "temp"))
 	wd, _ := os.Getwd()
@@ -509,9 +507,9 @@ func (ssed *Fs) Close() {
 	}
 	os.Chdir(wd)
 
-	_, matching := ssed.doesMD5MatchServer()
+	err, matching := ssed.doesMD5MatchServer()
 	if ssed.successfulPull && !matching {
-		ssed.upload()
+		err = ssed.upload()
 	} else {
 		logger.Debug("Skipping upload")
 	}
@@ -533,6 +531,7 @@ func (ssed *Fs) Close() {
 	// 		}
 	// 	}
 	// }
+	return err
 }
 
 func (ssed *Fs) delete() error {

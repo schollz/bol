@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -9,16 +11,17 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/schollz/bol/ssed"
 	"github.com/urfave/cli"
 )
 
 var (
-	Version, BuildTime, Build, OS, LastCommit string
-	Debug, Summarize                          bool
-	DontEncrypt, Clean                        bool
-	ResetConfig, DumpFile                     bool
-	ImportOldFile, ImportFile                 bool
+	Version, BuildTime, Build, OS, LastCommit, Editor string
+	Debug, Summarize                                  bool
+	DontEncrypt, Clean                                bool
+	ResetConfig, DumpFile                             bool
+	ImportOldFile, ImportFile                         bool
 )
 
 func main() {
@@ -53,10 +56,31 @@ EXAMPLE USAGE:
 		if Debug {
 			ssed.DebugMode()
 			DebugMode()
+			logger.Debug("Turning on Debug mode")
+		}
+
+		if len(Editor) > 0 {
+			Editor = strings.TrimSpace(strings.ToLower(Editor))
+			if Editor == "vim" || Editor == "emacs" || Editor == "micro" {
+				ioutil.WriteFile(path.Join(homePath, ".config", "bol", "editor"), []byte(Editor), 0644)
+				fmt.Printf("Editor set to ")
+				c := color.New(color.FgHiCyan)
+				c.Println(Editor)
+			} else {
+				c := color.New(color.FgHiRed)
+				c.Print(Editor)
+				fmt.Println(" is not supported, sorry.")
+				fmt.Println("\nSupported editors are:")
+				fmt.Println("- vim:   ftp://ftp.vim.org/pub/vim/pc/vim80-069w32.zip")
+				fmt.Println("- micro: https://github.com/zyedidia/micro/releases/latest")
+				fmt.Println("- emacs")
+			}
+			return nil
 		}
 
 		if Clean {
 			ssed.EraseAll()
+			fmt.Println("All bol files cleared")
 		} else {
 			workingFile := c.Args().Get(0)
 			Run(workingFile, ResetConfig, DumpFile)
@@ -83,6 +107,11 @@ EXAMPLE USAGE:
 			Name:        "dump",
 			Usage:       "Dump the current documents",
 			Destination: &DumpFile,
+		},
+		cli.StringFlag{
+			Name:        "editor",
+			Usage:       "express which `editor` to use (micro / vim / emacs)",
+			Destination: &Editor,
 		},
 		// cli.BoolFlag{
 		// 	Name:        "importold",

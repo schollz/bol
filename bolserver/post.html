@@ -34,6 +34,7 @@
 </style>
 
 <link rel="stylesheet" type="text/css" href="/static/bootstrap.min.css">
+<script src="/static/jquery.min.js"></script>
 </head>
 <body>
 <div id="form-container" class="container">
@@ -43,7 +44,7 @@
       <div class="col-sm-6">
         <div class="form-group">
           <label for="display_name">Document</label>
-<!--<input class="form-control" name="document" type="text" value="notes">-->        
+<!--<input class="form-control" name="document" type="text" value="notes">-->
       <select class="form-control" id="document" name="document">
         OPTIONS
       </select>
@@ -54,7 +55,7 @@
       <div class="col-sm-6">
         <div class="form-group">
           <label for="location">Entry</label>
-          <input class="form-control"  name="entry" type="text" value="">
+          <input class="form-control"  id="entry" name="entry" type="text" value="">
         </div>
       </div>
     </div>
@@ -66,10 +67,34 @@
   </form>
 </div>
 
+  <div class="row">
+<button class="btn btn-primary" name="openbutton" id="openbutton">Open Document</button>
+</div>
+
 <script>
 document.getElementById("text").focus();
+
+$(function() {
+    $("#openbutton").click(function(e) {
+        e.preventDefault();
+        $.ajax({
+            type: "GET",
+            url: "/document",
+            data: {
+                document_name: $("#document").val(), // < note use of 'this' here
+                access_token: 'keyXX'
+            },
+            success: function(result) {
+                document.getElementById("form-container").innerHTML=result;
+            },
+            error: function(result) {
+              document.getElementById("form-container").innerHTML="<h1>Error</h1>"+result;
+            }
+        });
+    });
+});
 </script>
 
-</body>
+</div>
 
 </html>

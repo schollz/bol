@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -13,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/jcelliott/lumber"
 	"github.com/kardianos/osext"
 	homedir "github.com/mitchellh/go-homedir"
@@ -35,14 +35,14 @@ func init() {
 	logger = lumber.NewConsoleLogger(lumber.DEBUG)
 	logger.Level(2)
 	homePath, _ = homedir.Dir()
-	if !utils.Exists(path.Join(homePath, ".cache")) {
-		os.MkdirAll(path.Join(homePath, ".cache"), 0755)
+	if !utils.Exists(path.Join(homePath, ".config")) {
+		os.MkdirAll(path.Join(homePath, ".config"), 0755)
 	}
-	if !utils.Exists(path.Join(homePath, ".cache", "ssed")) {
-		os.MkdirAll(path.Join(homePath, ".cache", "ssed"), 0755)
-	}
-	if !utils.Exists(path.Join(homePath, ".cache", "ssed", "temp")) {
-		os.MkdirAll(path.Join(homePath, ".cache", "ssed", "temp"), 0755)
+	if !utils.Exists(path.Join(homePath, ".config", "bol")) {
+		c := color.New(color.FgCyan)
+		c.Println("Welcome to bol!")
+		fmt.Println("")
+		os.MkdirAll(path.Join(homePath, ".config", "bol"), 0755)
 	}
 }
 
@@ -69,21 +69,37 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 		// 	fs.Init(username, method)
 		// }
 	} else {
-		fmt.Println(fs.ReturnUser(), fs.ReturnMethod())
+		c := color.New(color.FgHiCyan)
+		fmt.Print("User:\t")
+		c.Println(fs.ReturnUser())
+		fmt.Print("Server:\t")
+		c.Println(fs.ReturnMethod())
 	}
 	for {
 		password := utils.GetPassword()
 		err = fs.Open(password)
 		if err == nil {
 			// Check user status
-			fmt.Println(utils.CreateBolUser(fs.ReturnUser(), password, fs.ReturnMethod()))
+			_, err2 := utils.CreateBolUser(fs.ReturnUser(), password, fs.ReturnMethod())
+			if err2 != nil {
+				c := color.New(color.FgCyan)
+				c.Printf("\n\n%s\n", "Cannot connect to server, working locally")
+			}
 			break
 		} else {
 			fmt.Println("Incorrect password.")
 		}
 	}
-	defer fs.Close()
-
+	defer func() {
+		err := fs.Close()
+		if err != nil {
+			c := color.New(color.FgCyan)
+			c.Printf("\nUpdated local copy of '%s'\n", workingFile)
+		} else {
+			c := color.New(color.FgCyan)
+			c.Printf("\nUploaded changes to '%s'\n", workingFile)
+		}
+	}()
 	if dumpFile {
 		fs.DumpAll()
 		return
@@ -117,8 +133,11 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 		if len(workingFile) == 0 {
 			workingFile = "notes"
 		}
-		fmt.Printf("Opening '%s'...", workingFile)
-		fmt.Printf("\n\n%s\n\n", getquote.GetQuote())
+		quote := getquote.GetQuote()
+		if len(quote) > 0 {
+			c := color.New(color.FgGreen)
+			c.Printf("\n\n%s\n\n", getquote.GetQuote())
+		}
 		entries = fs.GetDocument(workingFile)
 	} else {
 		logger.Debug("Parsing whether it is a document or entry")
@@ -133,7 +152,11 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 			if len(truncated) > 10 {
 				truncated = truncated[:10]
 			}
-			fmt.Printf("%10s (%12s)\t%s\n", strings.Split(entry.Timestamp, " ")[0], entry.Entry, strings.Join(truncated, " "))
+			c := color.New(color.FgCyan)
+			c.Printf("%10s", strings.Split(entry.Timestamp, " ")[0])
+			c = color.New(color.FgHiRed)
+			c.Printf(" (%10s)", entry.Entry)
+			fmt.Printf("  %s\n", strings.Join(truncated, " "))
 		}
 	}
 	if isNewEntry {
@@ -143,7 +166,16 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 		return
 	}
 
-	newText := WriteEntry(fullText, "vim", len(entries) == 1)
+	// Determine editor
+	editor := "vim"
+	if utils.Exists(path.Join(homePath, ".config", "bol", "editor")) {
+		editorBytes, _ := ioutil.ReadFile(path.Join(homePath, ".config", "bol", "editor"))
+		editor = string(editorBytes)
+	}
+	newText := WriteEntry(fullText, editor, len(entries) == 1)
+	if newText == "" {
+		return
+	}
 	for _, splitText := range strings.Split(newText, JOURNAL_DELIMITER) {
 		lines := strings.Split(splitText, "\n")
 		if len(lines) < 3 {
@@ -251,56 +283,37 @@ com! WPCLI call WordProcessorModeCLI()`
 		extension = ".exe"
 	}
 
-	// Load from binary assets
-	logger.Debug("Trying to get asset: %s", "bin/"+editor+extension)
-	tryBuiltin := false
-	data, err := Asset("bin/" + editor + extension)
-	if err == nil {
-		logger.Debug("Using builtin editor: %s", "bin/"+editor+extension)
-		err = ioutil.WriteFile(path.Join(homePath, ".cache", "ssed", "temp", editor+extension), data, 0755)
-		if err != nil {
-			log.Fatal(err)
-		}
-		tryBuiltin = true
-	} else {
-		logger.Debug("Could not find builtin editor: %s", err.Error())
-	}
-
 	// Write the file to load
 	ioutil.WriteFile(path.Join(ssed.PathToTempFolder, "temp"), []byte(text), 0644)
 
-	// Run the editor
-	logger.Debug("Using arguments: %s", strings.Join(cmdArgs, " "))
-	err = errors.New("Editor not run")
-	if tryBuiltin {
-		logger.Debug("Using builtin editor: %s", path.Join(homePath, ".cache", "ssed", "temp", editor+extension))
-		cmd := exec.Command(path.Join(homePath, ".cache", "ssed", "temp", editor+extension), cmdArgs...)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		err = cmd.Run()
-	}
+	// Try to execute from the same folder
+	programPath, _ := osext.ExecutableFolder()
+	editor = filepath.Base(editor)
+	logger.Debug("Using editor in program path: %s", path.Join(programPath, editor+extension))
+	cmd := exec.Command(path.Join(programPath, editor+extension), cmdArgs...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	err := cmd.Run()
 	if err != nil {
-		logger.Debug("Not using builtin: %s", err.Error())
-		// Try to execute from the same folder
-		programPath, _ := osext.ExecutableFolder()
-		editor = filepath.Base(editor)
-		logger.Debug("Using editor in program path: %s", path.Join(programPath, editor+extension))
-		cmd := exec.Command(path.Join(programPath, editor+extension), cmdArgs...)
+		logger.Debug("Failed using editor in program path: %s", err.Error())
+		// Try to execute from system path
+		logger.Debug("Using editor in system path: %s", editor+extension)
+		cmd := exec.Command(editor+extension, cmdArgs...)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		err2 := cmd.Run()
 		if err2 != nil {
-			logger.Debug("Failed using editor in program path: %s", err.Error())
-			// Try to execute from system path
-			logger.Debug("Using editor in system path: %s", editor+extension)
-			cmd := exec.Command(editor+extension, cmdArgs...)
-			cmd.Stdin = os.Stdin
-			cmd.Stdout = os.Stdout
-			err3 := cmd.Run()
-			if err3 != nil {
-				logger.Debug("Failed using from system path")
-				log.Fatal(err3)
-			}
+			logger.Debug("Failed using from system path")
+			c := color.New(color.FgHiRed)
+			c.Printf("\n%s not found in system path or local path, \ndo you have it installed?\n", editor)
+			c.Println("\nMake sure you have a editor installed \nin the system or current directory.")
+			c.Println("\nSupported editors are:")
+			c.Println("- vim:   ftp://ftp.vim.org/pub/vim/pc/vim80-069w32.zip")
+			c.Println("- micro: https://github.com/zyedidia/micro/releases/latest")
+			c.Println("- emacs")
+			c.Println("\nYou can switch editors with\n\n\tbol --editor [vim|emacs|micro]")
+			fmt.Println("")
+			os.Exit(-1)
 		}
 	}
 	fileContents, _ := ioutil.ReadFile(path.Join(ssed.PathToTempFolder, "temp"))

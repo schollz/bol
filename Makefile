@@ -18,7 +18,7 @@ $(BINARY): $(SOURCES)
 build:
 	# echo "Bundle data"
 	# go get -u -v github.com/jteeuwen/go-bindata/...
-	# cd server && go-bindata static/ login.html post.html
+	cd bolserver && go-bindata static/* login.html post.html
 	rm -rf build
 	mkdir -p build
 	echo "Building Linux AMD64"

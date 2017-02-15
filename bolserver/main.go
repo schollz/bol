@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/russross/blackfriday"
 	"github.com/schollz/bol/ssed"
 
 	"github.com/schollz/bol/utils"
@@ -48,6 +49,7 @@ func main() {
 	http.HandleFunc("/", HandleLogin)
 	http.HandleFunc("/login", HandleLoginAttempt)
 	http.HandleFunc("/register", HandleRegisterAttempt)
+	http.HandleFunc("/document", HandleDocument)
 	http.HandleFunc("/post", HandlePostAttempt)
 	http.HandleFunc("/static/", func(w http.ResponseWriter, r *http.Request) {
 		data, err := Asset(r.URL.Path[1:])
@@ -70,6 +72,33 @@ func main() {
 
 func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	ShowLoginPage(w, r, "", "")
+}
+
+func HandleDocument(w http.ResponseWriter, r *http.Request) {
+	documentName := r.URL.Query().Get("document_name")
+	apikey := r.URL.Query().Get("access_token")
+	var username, password string
+	apikeys.Lock()
+	if val, ok := apikeys.m[apikey]; ok {
+		username = strings.Split(val, "=")[0]
+		password = strings.Split(val, "=")[1]
+	} else {
+		apikeys.Unlock()
+		ShowLoginPage(w, r, "Incorrect API key", "danger")
+		return
+	}
+	delete(apikeys.m, apikey)
+	apikeys.Unlock()
+	var fs ssed.Fs
+	fs.Init(username, "http://127.0.0.1:"+Port)
+	fs.Open(password)
+	defer fs.Close()
+	html := fmt.Sprintf("<h1>%s</h1>", documentName)
+	for _, entry := range fs.GetDocument(documentName) {
+		html += fmt.Sprintf("<h2>%s</h2><small>%s</small>", entry.Entry, entry.Timestamp)
+		html += fmt.Sprintf(`<div class="row">%s</div>`, string(blackfriday.MarkdownBasic([]byte(entry.Text))))
+	}
+	io.WriteString(w, html)
 }
 
 type loginInfo struct {
@@ -105,8 +134,12 @@ func HandlePostAttempt(w http.ResponseWriter, r *http.Request) {
 	delete(apikeys.m, apikey)
 	apikeys.Unlock()
 	fmt.Printf("document:%s\ntext:%s\n", document, text)
-	go updateRepo(username, password, text, document, entry, "")
-	ShowLoginPage(w, r, "Updated entry", "success")
+	if len(strings.TrimSpace(text)) > 0 {
+		go updateRepo(username, password, text, document, entry, "")
+		ShowLoginPage(w, r, "Updated entry", "success")
+	} else {
+		ShowLoginPage(w, r, "Not enough text to add entry", "info")
+	}
 }
 
 func deleteApikeyDelay(apikey string) {

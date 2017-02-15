@@ -277,28 +277,28 @@ func GetUnixTimestamp() string {
 }
 
 // CreateBolUser creates the specified user on the specified server
-func CreateBolUser(username string, password string, server string) string {
+func CreateBolUser(username string, password string, server string) (string, error) {
 	req, err := http.NewRequest("PUT", server+"/repo", nil)
 	if err != nil {
-		return "Problem creating user on server"
+		return "Cannot connect to server", err
 	}
 	req.SetBasicAuth(username, password)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "Problem creating user on server"
+		return "Cannot connect to server, local copies will be updated later", err
 	}
 	defer resp.Body.Close()
 	htmlData, err := ioutil.ReadAll(resp.Body) //<--- here!
 	if err != nil {
-		return "Problem creating user on server"
+		return "Problem creating user on server", err
 	}
 
 	if strings.Contains(string(htmlData), "inserted") {
-		return string(fmt.Sprintf("'%s' user created on server %s\n", username, server))
+		return string(fmt.Sprintf("'%s' user created on server %s\n", username, server)), nil
 	}
-	return ""
+	return "", nil
 }
 
 // ComputeMd5 returns the md5sum of a file

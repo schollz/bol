@@ -133,7 +133,6 @@ func HandlePostAttempt(w http.ResponseWriter, r *http.Request) {
 	}
 	delete(apikeys.m, apikey)
 	apikeys.Unlock()
-	fmt.Printf("document:%s\ntext:%s\n", document, text)
 	if len(strings.TrimSpace(text)) > 0 {
 		go updateRepo(username, password, text, document, entry, "")
 		ShowLoginPage(w, r, "Updated entry", "success")

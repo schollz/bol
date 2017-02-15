@@ -120,6 +120,9 @@ func HandlePostAttempt(w http.ResponseWriter, r *http.Request) {
 	apikey := strings.TrimSpace(strings.Split(lines[1], "document")[0])
 	document := strings.TrimSpace(strings.Split(lines[2], "entry")[0])
 	entry := strings.TrimSpace(strings.Split(lines[3], "data")[0])
+	if len(entry) == 0 {
+		entry = utils.GetRandomMD5Hash()
+	}
 	text := strings.Join(strings.Split(strings.TrimSpace(lines[4]), "\r"), "")
 	var username, password string
 	apikeys.Lock()

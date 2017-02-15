@@ -149,25 +149,29 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 	}
 
 	fullText := ""
-	for _, entry := range entries {
+	for i, entry := range entries {
 		fullText += fmt.Sprintf("%s %s\n%s\n\n%s\n\n", JOURNAL_DELIMITER, entry.Entry, entry.Timestamp, strings.TrimSpace(entry.Text))
 		if Summarize {
+			c := color.New(color.FgCyan)
+			if i == 0 {
+				c.Println("\nSummary:")
+			}
 			truncated := strings.Fields(entry.Text)
 			if len(truncated) > 10 {
 				truncated = truncated[:10]
 			}
-			c := color.New(color.FgCyan)
 			c.Printf("%10s", strings.Split(entry.Timestamp, " ")[0])
 			c = color.New(color.FgHiRed)
-			c.Printf(" (%10s)", entry.Entry)
-			fmt.Printf("  %s\n", strings.Join(truncated, " "))
+			c.Printf(" (%s)", entry.Entry)
+			fmt.Printf(" %s\n", strings.Join(truncated, " "))
 		}
 	}
 	if isNewEntry {
 		fullText += fmt.Sprintf("%s %s\n%s\n\n\n%s", JOURNAL_DELIMITER, utils.GetRandomMD5Hash(), utils.GetCurrentDate(), "")
 	}
 	if Summarize {
-		return
+		fmt.Println("")
+		os.Exit(-1)
 	}
 
 	// Determine editor

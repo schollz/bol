@@ -33,7 +33,7 @@ func DebugMode() {
 
 func init() {
 	logger = lumber.NewConsoleLogger(lumber.DEBUG)
-	logger.Level(0)
+	logger.Level(2)
 	logger.Debug("Initializing")
 	homePath, _ = homedir.Dir()
 	if !utils.Exists(path.Join(homePath, ".config")) {

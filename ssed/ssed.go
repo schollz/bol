@@ -32,12 +32,15 @@ type config struct {
 
 var pathToConfigFile string
 var pathToCacheFolder string
-var PathToTempFolder string
 var pathToLocalFolder string
 var pathToRemoteFolder string
 var homePath string
 var logger *lumber.ConsoleLogger
 
+// PathToTempFolder is the path to the temporary folder created by ssed
+var PathToTempFolder string
+
+// DebugMode enables logging
 func DebugMode() {
 	logger.Level(0)
 }
@@ -78,9 +81,8 @@ func createDirs() {
 	pathToRemoteFolder = path.Join(dir, ".cache", "ssed", "remote")
 }
 
-// Filesystem specific
-
-type entry struct {
+// Entry is the fundamental unit of an entry in any document
+type Entry struct {
 	Text              string `json:"text"`
 	Timestamp         string `json:"timestamp"`
 	ModifiedTimestamp string `json:"modified_timestamp"`
@@ -92,9 +94,10 @@ type entry struct {
 
 type document struct {
 	Name    string
-	Entries []entry
+	Entries []Entry
 }
 
+// Fs is the filesystem for ssed
 type Fs struct {
 	wg               sync.WaitGroup
 	havePassword     bool
@@ -108,19 +111,22 @@ type Fs struct {
 	password         string
 	method           string
 	archiveName      string
-	entries          map[string]entry    // uuid -> entry
+	entries          map[string]Entry    // uuid -> entry
 	entryNameToUUID  map[string]string   // entry name -> uuid
 	ordering         map[string][]string // document -> list of entry uuids in order
 }
 
-func GetBlankEntries() []entry {
-	return []entry{}
+// GetBlankEntries returns an empty slice of entries
+func GetBlankEntries() []Entry {
+	return []Entry{}
 }
 
+// EraseConfig erases the folder containing ssed configuration files
 func EraseConfig() {
 	utils.Shred(pathToConfigFile)
 }
 
+// EraseAll erases the folders for configuration and cache for ssed
 func EraseAll() {
 	createDirs()
 	CleanUp()
@@ -138,13 +144,6 @@ func CleanUp() {
 	utils.Shred(path.Join(PathToTempFolder, "temp"))
 }
 
-func ListConfigs() []config {
-	b, _ := ioutil.ReadFile(pathToConfigFile)
-	var configs []config
-	json.Unmarshal(b, &configs)
-	return configs
-}
-
 // ReturnMethod returns the current method being used
 func (ssed *Fs) ReturnMethod() string {
 	return ssed.method
@@ -155,6 +154,7 @@ func (ssed *Fs) ReturnUser() string {
 	return ssed.username
 }
 
+// SetMethod sets the server to obtain the synchronization
 func (ssed *Fs) SetMethod(method string) error {
 	if !strings.Contains(method, "http") && !strings.Contains(method, "ssh") {
 		return errors.New("Incorrect method provided")
@@ -277,27 +277,27 @@ func (ssed *Fs) downloadAndDecompress() {
 	ssed.wg.Done()
 }
 
-func (ssed *Fs) doesMD5MatchServer() (error, bool) {
+func (ssed *Fs) doesMD5MatchServer() (bool, error) {
 
 	if !strings.Contains(ssed.method, "http") {
-		return errors.New("No server available"), false
+		return false, errors.New("No server available")
 	}
 
 	defer timeTrack(time.Now(), "doesMD5MatchServer")
 	req, err := http.NewRequest("GET", ssed.method+"/md5", nil)
 	if err != nil {
-		return err, false
+		return false, err
 	}
 	req.SetBasicAuth(ssed.username, "") // no password needed
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err, false
+		return false, err
 	}
 	defer resp.Body.Close()
 	htmlData, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err, false
+		return false, err
 	}
 	currentMD5, err := utils.ComputeMd5(path.Join(pathToLocalFolder, ssed.archiveName))
 	if err != nil {
@@ -305,7 +305,7 @@ func (ssed *Fs) doesMD5MatchServer() (error, bool) {
 	}
 	matchingMD5 := currentMD5 == string(htmlData)
 	logger.Debug("server md5 '%s' = local md5 '%s' = %v", string(htmlData), currentMD5, matchingMD5)
-	return nil, matchingMD5
+	return matchingMD5, nil
 }
 
 func (ssed *Fs) download() error {
@@ -314,7 +314,7 @@ func (ssed *Fs) download() error {
 		return errors.New("No server available")
 	}
 
-	err, matching := ssed.doesMD5MatchServer()
+	matching, err := ssed.doesMD5MatchServer()
 	if err != nil {
 		return err
 	}
@@ -404,6 +404,7 @@ func (ssed *Fs) copyOverFiles() {
 // 	return string(decrypted), err
 // }
 
+// Open attempts to open a ssed repostiroy using the specified password
 func (ssed *Fs) Open(password string) error {
 	// only continue if the downloading is finished
 	ssed.wg.Wait()
@@ -411,13 +412,11 @@ func (ssed *Fs) Open(password string) error {
 
 	// check password against one of the files (if they exist)
 	files, _ := filepath.Glob(path.Join(pathToLocalFolder, ssed.username, "*"))
-	for _, file := range files {
-		logger.Debug("Testing against %s", file)
-		_, err := utils.DecryptFromFile(password, file)
+	if len(files) > 0 {
+		logger.Debug("Testing against %s", files[0])
+		_, err := utils.DecryptFromFile(password, files[0])
 		if err != nil {
 			return err
-		} else {
-			break
 		}
 	}
 	ssed.password = password
@@ -446,7 +445,7 @@ func (ssed *Fs) Update(text, documentName, entryName, timestamp string) error {
 		modifiedTimestamp = utils.GetCurrentDate()
 	}
 
-	e := entry{
+	e := Entry{
 		Text:              text,
 		Document:          documentName,
 		Entry:             entryName,
@@ -473,13 +472,13 @@ func (ssed *Fs) Update(text, documentName, entryName, timestamp string) error {
 	return err
 }
 
-// Delete Entry will simply Update("ignore-entry",documentName,entryName,"")
+// DeleteEntry will simply Update("ignore-entry",documentName,entryName,"")
 func (ssed *Fs) DeleteEntry(documentName, entryName string) {
 	ssed.Update("ignore entry", documentName, entryName, "")
 	ssed.parsed = false
 }
 
-// Delete Entry will simply Update("ignore document",documentName,entryName,"")
+// DeleteDocument will simply Update("ignore document",documentName,entryName,"")
 func (ssed *Fs) DeleteDocument(documentName string) {
 	ssed.Update("ignore document", documentName, "", "")
 	ssed.parsed = false
@@ -507,7 +506,7 @@ func (ssed *Fs) Close() error {
 	}
 	os.Chdir(wd)
 
-	err, matching := ssed.doesMD5MatchServer()
+	matching, err := ssed.doesMD5MatchServer()
 	if ssed.successfulPull && !matching {
 		err = ssed.upload()
 	} else {
@@ -589,7 +588,7 @@ func (ssed *Fs) upload() error {
 	return nil
 }
 
-type timeSlice []entry
+type timeSlice []Entry
 
 func (p timeSlice) Len() int {
 	return len(p)
@@ -607,10 +606,10 @@ func (p timeSlice) Swap(i, j int) {
 func (ssed *Fs) parseArchive() {
 	defer timeTrack(time.Now(), "Parsing archive")
 	files, _ := filepath.Glob(path.Join(ssed.pathToLocalRepo, "*"))
-	ssed.entries = make(map[string]entry)
+	ssed.entries = make(map[string]Entry)
 	ssed.entryNameToUUID = make(map[string]string)
 	ssed.ordering = make(map[string][]string)
-	var entriesToSortByModified = make(map[string]entry)
+	var entriesToSortByModified = make(map[string]Entry)
 	for _, file := range files {
 		logger.Debug("Parsing %s", file)
 		// key := sha256.Sum256([]byte(ssed.password))
@@ -627,7 +626,7 @@ func (ssed *Fs) parseArchive() {
 			panic(err)
 		}
 
-		var e entry
+		var e Entry
 		err = json.Unmarshal(decrypted, &e)
 		if err != nil {
 			panic(err)
@@ -648,7 +647,7 @@ func (ssed *Fs) parseArchive() {
 	sort.Sort(sortedEntries)
 
 	alreadyAddedEntry := make(map[string]bool)
-	var entriesToSortByCreated = make(map[string]entry)
+	var entriesToSortByCreated = make(map[string]Entry)
 	for _, entry := range sortedEntries {
 		if _, ok := alreadyAddedEntry[entry.Entry]; ok {
 			continue
@@ -681,6 +680,7 @@ func (ssed *Fs) parseArchive() {
 	ssed.parsed = true
 }
 
+// ListEntries returns slice of all the entries in all documents
 func (ssed *Fs) ListEntries() []string {
 	if !ssed.parsed {
 		ssed.parseArchive()
@@ -694,6 +694,7 @@ func (ssed *Fs) ListEntries() []string {
 	return entries
 }
 
+// ListDocuments lists all documents available
 func (ssed *Fs) ListDocuments() []string {
 	defer timeTrack(time.Now(), "Listing documents")
 	if !ssed.parsed {
@@ -726,11 +727,13 @@ func (ssed *Fs) entryExists(entryName string) bool {
 	return false
 }
 
-func (ssed *Fs) GetDocumentOrEntry(ambiguous string) ([]entry, bool, string, error) {
+// GetDocumentOrEntry returns a entry slice that is either the entry or all entries in a document
+// this is a useful function if you don't know whether an input is a document or an entry
+func (ssed *Fs) GetDocumentOrEntry(ambiguous string) ([]Entry, bool, string, error) {
 	if !ssed.parsed {
 		ssed.parseArchive()
 	}
-	var entries []entry
+	var entries []Entry
 	logger.Debug("Ambiguous: %s", ambiguous)
 	for document := range ssed.ordering {
 		logger.Debug("Possible doc: %s", document)
@@ -739,7 +742,7 @@ func (ssed *Fs) GetDocumentOrEntry(ambiguous string) ([]entry, bool, string, err
 		}
 		for _, entryUUID := range ssed.ordering[document] {
 			if ssed.entries[entryUUID].Entry == ambiguous {
-				entries = []entry{ssed.entries[entryUUID]}
+				entries = []Entry{ssed.entries[entryUUID]}
 				return entries, false, ssed.entries[entryUUID].Document, nil
 			}
 		}
@@ -747,17 +750,18 @@ func (ssed *Fs) GetDocumentOrEntry(ambiguous string) ([]entry, bool, string, err
 	return entries, true, ambiguous, errors.New("Can't find entry or document")
 }
 
-func (ssed *Fs) GetDocument(documentName string) []entry {
+// GetDocument returns a slice of all entries in that document
+func (ssed *Fs) GetDocument(documentName string) []Entry {
 	defer timeTrack(time.Now(), "Getting document "+documentName)
 	if !ssed.parsed {
 		ssed.parseArchive()
 	}
-	entries := make([]entry, len(ssed.ordering[documentName]))
+	entries := make([]Entry, len(ssed.ordering[documentName]))
 	curEntry := 0
 	for _, uuid := range ssed.ordering[documentName] {
 		if ssed.entries[uuid].Text == "ignore document" {
 			logger.Debug("Ignoring document %s", ssed.entries[uuid].Timestamp)
-			return []entry{}
+			return []Entry{}
 		}
 		if ssed.entries[uuid].Text == "ignore entry" {
 			logger.Debug("Ignoring entry %s", ssed.entries[uuid].Timestamp)
@@ -769,13 +773,14 @@ func (ssed *Fs) GetDocument(documentName string) []entry {
 	return entries[0:curEntry]
 }
 
-func (ssed *Fs) GetEntry(documentName, entryName string) (entry, error) {
+// GetEntry returns the entry with specified name and document
+func (ssed *Fs) GetEntry(documentName, entryName string) (Entry, error) {
 	defer timeTrack(time.Now(), "Getting entry "+entryName)
 	if !ssed.parsed {
 		ssed.parseArchive()
 	}
 
-	var e entry
+	var e Entry
 	for _, uuid := range ssed.ordering[documentName] {
 		log.Println(entryName, ssed.entries[uuid].Entry)
 		if ssed.entries[uuid].Entry == entryName {
@@ -794,7 +799,7 @@ func (ssed *Fs) GetEntry(documentName, entryName string) (entry, error) {
 // 	for docName := range ssed.ordering {
 // 		var doc document
 // 		doc.Name = docName
-// 		doc.Entries = make([]entry, len(ssed.ordering[docName]))
+// 		doc.Entries = make([]Entry, len(ssed.ordering[docName]))
 // 		for i, uuid := range ssed.ordering[docName] {
 // 			doc.Entries[i] = ssed.entries[uuid]
 // 		}
@@ -804,19 +809,20 @@ func (ssed *Fs) GetEntry(documentName, entryName string) (entry, error) {
 // 	ioutil.WriteFile(filename, bJson, 0644)
 // }
 
+// DumpAll dumps a file with current date and name, encyprted
 func (ssed *Fs) DumpAll() (string, error) {
 	filename := ssed.username + "-" + time.Now().Format("2006-01-02") + ".bol"
 	files, _ := filepath.Glob(path.Join(ssed.pathToLocalRepo, "*"))
 
-	ssed.entries = make(map[string]entry)
-	var entriesToSortByModified = make(map[string]entry)
+	ssed.entries = make(map[string]Entry)
+	var entriesToSortByModified = make(map[string]Entry)
 	for _, file := range files {
 		logger.Debug("Parsing %s", file)
 		decrypted, err := utils.DecryptFromFile(ssed.password, file)
 		if err != nil {
 			panic(err)
 		}
-		var e entry
+		var e Entry
 		err = json.Unmarshal(decrypted, &e)
 		if err != nil {
 			panic(err)
@@ -853,8 +859,8 @@ func (ssed *Fs) DumpAll() (string, error) {
 		documentList[i] = documentMap[doc]
 		i++
 	}
-	bJson, _ := json.MarshalIndent(documentList, "", " ")
-	utils.EncryptToFile(bJson, ssed.password, filename)
+	bJSON, _ := json.MarshalIndent(documentList, "", " ")
+	utils.EncryptToFile(bJSON, ssed.password, filename)
 	return filename, nil
 }
 

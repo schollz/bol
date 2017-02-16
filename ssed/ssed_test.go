@@ -12,8 +12,8 @@ import (
 )
 
 func init() {
-	message := utils.CreateBolUser("test", "test", "http://localhost:9095")
-	if strings.Contains(message, "Problem") {
+	message, err := utils.CreateBolUser("test", "test", "http://localhost:9095")
+	if strings.Contains(message, "Problem") || err != nil {
 		fmt.Println("Need to start a local server on port 9095 before testing")
 		os.Exit(-1)
 	}
@@ -181,4 +181,27 @@ func TestServer(t *testing.T) {
 		t.Errorf("Server test: Not throwing error for wrong password")
 	}
 
+	fs.Init("test", "http://localhost:9095")
+	fs.Open("test")
+	fs.Close()
+
+	entry, isDocument, _, _ := fs.GetDocumentOrEntry("entry2")
+	if len(entry) != 1 || isDocument {
+		t.Errorf("Problem GetDocumentOrEntry not detecting entry")
+		t.Error(len(entry))
+		t.Error(isDocument)
+	}
+
+	entry, isDocument, _, _ = fs.GetDocumentOrEntry("notes")
+	if len(entry) < 2 || !isDocument {
+		t.Errorf("Problem GetDocumentOrEntry not detecting document")
+		t.Error(len(entry))
+		t.Error(isDocument)
+	}
+
+	fs.delete()
+	md5, err := fs.doesMD5MatchServer()
+	if md5 != false {
+		t.Errorf("md5 should be false it was deleted remotely")
+	}
 }

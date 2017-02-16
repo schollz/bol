@@ -333,8 +333,8 @@ func HandleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if authenticated {
-		fileName := username + ".tar.bz2"
-		os.Remove(fileName)
+		log.Printf("DELETE: Deleted archive for '%s'", username)
+		os.RemoveAll(path.Join(wd, "archive", username))
 	}
 
 }

@@ -1,6 +1,6 @@
 # Guide to *ssed*
 
-![Coverage](https://img.shields.io/badge/coverage-90%-green.svg)
+![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)
 
 *bol* is powered by a library to perform *simple synchronization of encrypted documents* (*ssed*), refereed to as the filesystem (fs). The following is the working document for the idea and implementation of the *ssed* fs.
 

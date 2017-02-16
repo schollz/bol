@@ -51,6 +51,7 @@ func init() {
 }
 
 func createDirs() {
+	logger.Debug("Creating directories for ssed")
 	dir, _ := homedir.Dir()
 	homePath = dir
 	if !utils.Exists(path.Join(dir, ".config")) {

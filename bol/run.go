@@ -33,7 +33,8 @@ func DebugMode() {
 
 func init() {
 	logger = lumber.NewConsoleLogger(lumber.DEBUG)
-	logger.Level(2)
+	logger.Level(0)
+	logger.Debug("Initializing")
 	homePath, _ = homedir.Dir()
 	if !utils.Exists(path.Join(homePath, ".config")) {
 		os.MkdirAll(path.Join(homePath, ".config"), 0755)

@@ -78,3 +78,6 @@ I'm open to contributions, submit a pull request.
 # License
 
 MIT
+
+
+[![Analytics](https://ga-beacon.appspot.com/UA-60006442-4/github.com/schollz/find-lf)](https://github.com/igrigorik/ga-beacon)

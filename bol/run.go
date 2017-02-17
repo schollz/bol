@@ -138,15 +138,17 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 		if len(workingFile) == 0 {
 			workingFile = "notes"
 		}
-		quote := getquote.GetQuote()
-		if len(quote) > 0 {
-			c := color.New(color.FgGreen)
-			c.Printf("\n\n%s\n\n", getquote.GetQuote())
-		}
 		entries = fs.GetDocument(workingFile)
 	} else {
 		logger.Debug("Parsing whether it is a document or entry")
 		entries, isNewEntry, workingFile, _ = fs.GetDocumentOrEntry(workingFile)
+	}
+
+	// Print a quote
+	quote := getquote.GetQuote()
+	if len(quote) > 0 {
+		c := color.New(color.FgGreen)
+		c.Printf("\n\n%s\n", getquote.GetQuote())
 	}
 
 	fullText := ""

@@ -61,11 +61,10 @@ func main() {
 	})
 	http.HandleFunc("/repo", HandleRepo)    // POST latest repo
 	http.HandleFunc("/md5", HandleCheckMD5) // GET latest MD5 for user
-	if Host != "" {
-		fmt.Printf("Running on http://%s:%s, aliased as %s\n", GetLocalIP(), Port, Host)
-	} else {
-		fmt.Printf("Running on http://%s:%s\n", GetLocalIP(), Port)
+	if Host == "" {
+		Host = GetLocalIP() + Port
 	}
+	fmt.Printf("Running on http://%s:%s, aliased as %s\n", GetLocalIP(), Port, Host)
 	fmt.Printf("Saving up to %d MB for archives\n", MaxArchiveBytes/1000000)
 	log.Fatal(http.ListenAndServe(":"+Port, nil))
 }
@@ -89,8 +88,9 @@ func HandleDocument(w http.ResponseWriter, r *http.Request) {
 	}
 	delete(apikeys.m, apikey)
 	apikeys.Unlock()
+
 	var fs ssed.Fs
-	fs.Init(username, "http://127.0.0.1:"+Port)
+	fs.Init(username, Host)
 	fs.Open(password)
 	defer fs.Close()
 	html := fmt.Sprintf("<h1>%s</h1>", documentName)
@@ -154,7 +154,7 @@ func deleteApikeyDelay(apikey string) {
 
 func updateRepo(username, password, text, document, entry, date string) {
 	var fs ssed.Fs
-	fs.Init(username, "http://127.0.0.1:"+Port)
+	fs.Init(username, Host)
 	fs.Open(password)
 	fs.Update(text, document, entry, date)
 	fs.Close()
@@ -250,7 +250,7 @@ func HandleLoginAttempt(w http.ResponseWriter, r *http.Request) {
 		apikeys.Unlock()
 		pageS = strings.Replace(pageS, "keyXX", apikey, -1)
 		var fs ssed.Fs
-		fs.Init(username, "http://127.0.0.1:"+Port)
+		fs.Init(username, Host)
 		fs.Open(password)
 		documentList := fs.ListDocuments()
 		if len(documentList) == 0 {

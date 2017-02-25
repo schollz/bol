@@ -39,6 +39,8 @@ var logger *lumber.ConsoleLogger
 
 // PathToTempFolder is the path to the temporary folder created by ssed
 var PathToTempFolder string
+var LocalFolder string
+var RemoteFolder string
 
 // DebugMode enables logging
 func DebugMode() {
@@ -79,7 +81,9 @@ func createDirs() {
 	pathToCacheFolder = path.Join(dir, ".cache", "ssed")
 	PathToTempFolder = path.Join(dir, ".cache", "ssed", "temp")
 	pathToLocalFolder = path.Join(dir, ".cache", "ssed", "local")
+	LocalFolder = pathToLocalFolder
 	pathToRemoteFolder = path.Join(dir, ".cache", "ssed", "remote")
+	RemoteFolder = pathToRemoteFolder
 }
 
 // Entry is the fundamental unit of an entry in any document
@@ -358,6 +362,7 @@ func (ssed *Fs) decompress() {
 	if utils.Exists(path.Join(pathToRemoteFolder, ssed.archiveName)) {
 		wd, _ := os.Getwd()
 		os.Chdir(pathToRemoteFolder)
+		os.RemoveAll(ssed.username)
 		logger.Debug("Opening remote")
 		archiver.TarBz2.Open(ssed.archiveName, ssed.username)
 		os.Chdir(wd)

@@ -23,7 +23,7 @@ var (
 	DontEncrypt, Clean                                bool
 	ResetConfig, DumpFile                             bool
 	ImportOldFile, ImportFile                         bool
-	encryptFile, decryptFile                          string
+	encryptFile, decryptFile, importFile              string
 )
 
 func main() {
@@ -162,11 +162,11 @@ EXAMPLE USAGE:
 		// 	Usage:       "Import `document` (JRNL-format)",
 		// 	Destination: &bol.ImportOldFlag,
 		// },
-		// cli.BoolFlag{
-		// 	Name:        "import",
-		// 	Usage:       "Import `document`",
-		// 	Destination: &bol.ImportFlag,
-		// },
+		cli.StringFlag{
+			Name:        "import",
+			Usage:       "import `bol document`",
+			Destination: &importFile,
+		},
 		// cli.BoolFlag{
 		// 	Name:        "export",
 		// 	Usage:       "Export `document`",

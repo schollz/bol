@@ -110,6 +110,16 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 		return
 	}
 
+	if len(importFile) > 0 {
+		errImport := fs.Import(importFile)
+		if errImport != nil {
+			fmt.Printf("Problem importing %s: %s", importFile, errImport.Error())
+		} else {
+			fmt.Printf("\nImported %s", importFile)
+		}
+		return
+	}
+
 	entries := ssed.GetBlankEntries()
 	isNewEntry := true
 	logger.Debug("Working file input: '%s'", workingFile)

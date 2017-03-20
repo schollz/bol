@@ -870,6 +870,26 @@ func (ssed *Fs) DumpAll() (string, error) {
 	return filename, nil
 }
 
+// Import imports an unencrypted bol file
+func (ssed *Fs) Import(filename string) error {
+	bJSON, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+	var documentList []document
+	err = json.Unmarshal(bJSON, &documentList)
+	if err != nil {
+		return err
+	}
+
+	for _, document := range documentList {
+		for _, entry := range document.Entries {
+			ssed.Update(entry.Text, entry.Document, entry.Entry, entry.ModifiedTimestamp)
+		}
+	}
+	return nil
+}
+
 // timeTrack from https://coderwall.com/p/cp5fya/measuring-execution-time-in-go
 func timeTrack(start time.Time, name string) {
 	elapsed := time.Since(start)

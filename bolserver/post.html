@@ -34,6 +34,7 @@
 </style>
 
 <link rel="stylesheet" type="text/css" href="/static/bootstrap.min.css">
+<link rel="stylesheet" type="text/css" href="/static/github.css">
 <script src="/static/jquery.min.js"></script>
 </head>
 <body>
@@ -85,7 +86,7 @@ $(function() {
                 access_token: 'keyXX'
             },
             success: function(result) {
-                document.getElementById("form-container").innerHTML=result;
+                document.getElementById("form-container").innerHTML='<article class="markdown-body">' + result + '</article>';
             },
             error: function(result) {
               document.getElementById("form-container").innerHTML="<h1>Error</h1>"+result;

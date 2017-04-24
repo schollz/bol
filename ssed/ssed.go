@@ -16,10 +16,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jcelliott/lumber"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/schollz/archiver"
 	"github.com/schollz/bol/utils"
+	"github.com/schollz/lumber"
+	"github.com/schollz/pwdhash"
 )
 
 // Generic functions
@@ -30,6 +31,7 @@ type config struct {
 	Method         string `json:"method"`
 }
 
+var pathToConfigFolder string
 var pathToConfigFile string
 var pathToCacheFolder string
 var pathToLocalFolder string
@@ -78,6 +80,7 @@ func createDirs() {
 		os.MkdirAll(path.Join(dir, ".cache", "ssed", "remote"), 0755)
 	}
 	pathToConfigFile = path.Join(dir, ".config", "ssed", "config.json")
+	pathToConfigFolder = path.Join(dir, ".config", "ssed")
 	pathToCacheFolder = path.Join(dir, ".cache", "ssed")
 	PathToTempFolder = path.Join(dir, ".cache", "ssed", "temp")
 	pathToLocalFolder = path.Join(dir, ".cache", "ssed", "local")
@@ -137,7 +140,7 @@ func EraseAll() {
 	CleanUp()
 	EraseConfig()
 	os.RemoveAll(pathToCacheFolder)
-	os.RemoveAll(pathToConfigFile)
+	os.RemoveAll(pathToConfigFolder)
 	files, _ := filepath.Glob(path.Join(pathToCacheFolder, "*"))
 	for _, file := range files {
 		fmt.Println(file)
@@ -147,6 +150,44 @@ func EraseAll() {
 // CleanUp shreds all the temporary files
 func CleanUp() {
 	utils.Shred(path.Join(PathToTempFolder, "temp"))
+}
+
+// HasPinFile
+func (ssed *Fs) HasPinFile() bool {
+	return utils.Exists(path.Join(pathToConfigFolder, ssed.username+".key"))
+}
+
+// GetPasswordFromPin allows to use a pin
+func (ssed *Fs) GetPasswordFromPin(pin string) (string, error) {
+	if !utils.Exists(path.Join(pathToConfigFolder, ssed.username+".key")) {
+		return "", errors.New("Key not set")
+	}
+	hashPin, err := HashPasswordSlow(pin)
+	if err != nil {
+		os.Remove(path.Join(pathToConfigFolder, ssed.username+".key"))
+		return "", err
+	}
+	bPassword, err := utils.DecryptFromFile(hashPin, path.Join(pathToConfigFolder, ssed.username+".key"))
+	if err != nil {
+		os.Remove(path.Join(pathToConfigFolder, ssed.username+".key"))
+		return "", err
+	}
+	return string(bPassword), nil
+}
+
+// SetPinFromPassword allows to use a pin
+func (ssed *Fs) SetPinFromPassword(pin string) error {
+	hashPin, err := HashPasswordSlow(pin)
+	if err != nil {
+		return err
+	}
+	return utils.EncryptToFile([]byte(ssed.password), hashPin, path.Join(pathToConfigFolder, ssed.username+".key"))
+}
+
+// HashPasswordSlow generates a bcrypt hash of the password using work factor 1048576.
+func HashPasswordSlow(password string) (string, error) {
+	p, err := pwdhash.GenerateFromPassword([]byte(password), []byte("salt"), 1048576, 64, "sha512")
+	return string(p), err
 }
 
 // ReturnMethod returns the current method being used
@@ -515,8 +556,16 @@ func (ssed *Fs) Close() error {
 	matching, err := ssed.doesMD5MatchServer()
 	if ssed.successfulPull && !matching {
 		err = ssed.upload()
+		if err != nil {
+			err = errors.New("Cannot connect, local changes saved.")
+		}
 	} else {
-		logger.Debug("Skipping upload")
+		if !ssed.successfulPull {
+			err = errors.New("No internet, changes will be uploaded next time.")
+		} else {
+			err = errors.New("No changes, not uploading.")
+
+		}
 	}
 	// // shred the data files
 	// if ssed.shredding {

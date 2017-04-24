@@ -65,7 +65,7 @@ EXAMPLE USAGE:
 		}
 		if len(fileName) > 0 {
 			if utils.Exists(fileName) {
-				password := utils.GetPassword()
+				password := utils.GetPassword("password")
 				if len(encryptFile) > 0 {
 					b, _ := ioutil.ReadFile(fileName)
 					utils.EncryptToFile(b, password, fileName)

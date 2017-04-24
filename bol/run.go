@@ -77,7 +77,21 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 		c.Println(fs.ReturnMethod())
 	}
 	for {
-		password := utils.GetPassword()
+		var password string
+		var passwordEntry string
+		if fs.HasPinFile() {
+			passwordEntry = "pin"
+			pin := utils.GetPassword(passwordEntry)
+			var pinErr error
+			password, pinErr = fs.GetPasswordFromPin(pin)
+			if pinErr != nil {
+				c := color.New(color.FgRed)
+				c.Printf("\n\n%s\n", pinErr.Error())
+			}
+		} else {
+			passwordEntry = "password"
+			password = utils.GetPassword(passwordEntry)
+		}
 		err = fs.Open(password)
 		if err == nil {
 			// Check user status
@@ -85,6 +99,14 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 			if err2 != nil {
 				c := color.New(color.FgCyan)
 				c.Printf("\n\n%s\n", "Cannot connect to server, working locally")
+			}
+			if passwordEntry == "password" {
+				var pin string
+				fmt.Print("Please enter a pin for quick entry: ")
+				fmt.Scanln(&pin)
+				if strings.TrimSpace(pin) != "" {
+					fs.SetPinFromPassword(strings.TrimSpace(pin))
+				}
 			}
 			break
 		} else {
@@ -98,7 +120,7 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 		}
 		if err != nil {
 			c := color.New(color.FgCyan)
-			c.Printf("\nUpdated local copy of '%s'\n", workingFile)
+			c.Printf("\n%s\n", err.Error())
 		} else {
 			c := color.New(color.FgCyan)
 			c.Printf("\nUploaded changes to '%s'\n", workingFile)

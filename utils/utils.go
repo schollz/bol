@@ -21,16 +21,16 @@ import (
 	"github.com/schollz/cryptopasta"
 )
 
-func GetPassword() string {
-	fmt.Printf("Enter password: ")
+func GetPassword(passwordType string) string {
+	fmt.Printf("Enter %s: ", passwordType)
 	var password string
 	if runtime.GOOS == "windows" {
 		fmt.Scanln(&password) // not great fix, but works for cygwin
 	} else {
 		bytePassword, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
-		password = strings.TrimSpace(string(bytePassword))
+		password = string(bytePassword)
 	}
-	return password
+	return strings.TrimSpace(password)
 }
 
 func EncryptToFile(toEncrypt []byte, password string, filename string) error {

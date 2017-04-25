@@ -102,7 +102,7 @@ func Run(workingFile string, changeUser bool, dumpFile bool) {
 			}
 			if passwordEntry == "password" {
 				var pin string
-				fmt.Print("Please enter a pin for quick entry: ")
+				fmt.Print("\nEnter a pin (press enter to skip): ")
 				fmt.Scanln(&pin)
 				if strings.TrimSpace(pin) != "" {
 					fs.SetPinFromPassword(strings.TrimSpace(pin))

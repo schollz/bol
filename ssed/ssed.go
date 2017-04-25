@@ -21,6 +21,8 @@ import (
 	"github.com/schollz/bol/utils"
 	"github.com/schollz/lumber"
 	"github.com/schollz/pwdhash"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/host"
 )
 
 // Generic functions
@@ -186,8 +188,31 @@ func (ssed *Fs) SetPinFromPassword(pin string) error {
 
 // HashPasswordSlow generates a bcrypt hash of the password using work factor 1048576.
 func HashPasswordSlow(password string) (string, error) {
-	p, err := pwdhash.GenerateFromPassword([]byte(password), []byte("salt"), 1048576, 64, "sha512")
-	return string(p), err
+	hostinfo, e := host.Info()
+	if e != nil {
+		return "", e
+	}
+	cpuinfo, e := cpu.Info()
+	if e != nil {
+		return "", e
+	}
+	salt := hostinfo.OS + hostinfo.Hostname + cpuinfo[0].ModelName
+	t := time.Now()
+	var hashedPass string
+	workFactor := 65536
+	for {
+		p, err := pwdhash.GenerateFromPassword([]byte(password), []byte(salt), workFactor, 64, "sha512")
+		if err != nil {
+			return "", err
+		}
+		hashedPass = string(p)
+		if time.Since(t) > 500*time.Millisecond {
+			break
+		}
+		workFactor = workFactor + 65536
+		t = time.Now()
+	}
+	return hashedPass, nil
 }
 
 // ReturnMethod returns the current method being used

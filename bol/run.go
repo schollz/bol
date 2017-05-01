@@ -256,6 +256,9 @@ func! WordProcessorModeCLI()
 	setlocal noexpandtab
 	normal G$
 	normal zt
+	set foldcolumn=7
+	highlight Normal ctermfg=black ctermbg=grey
+	hi NonText ctermfg=grey guifg=grey
 endfu
 com! WPCLI call WordProcessorModeCLI()`
 		if singleEntry {
@@ -271,6 +274,9 @@ com! WPCLI call WordProcessorModeCLI()`
 		setlocal linebreak
 		setlocal noexpandtab
 		normal zt
+		set foldcolumn=7
+		highlight Normal ctermfg=black ctermbg=grey
+		hi NonText ctermfg=grey guifg=grey
 	endfu
 	com! WPCLI call WordProcessorModeCLI()`
 		}

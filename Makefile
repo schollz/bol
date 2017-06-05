@@ -2,7 +2,7 @@ SOURCEDIR=.
 
 BINARY=bol
 USER=schollz
-VERSION=1.1.0
+VERSION=1.2.0
 BUILD_TIME=`date +%FT%T%z`
 BUILD=`git rev-parse HEAD`
 BUILDSHORT = `git rev-parse --short HEAD`
